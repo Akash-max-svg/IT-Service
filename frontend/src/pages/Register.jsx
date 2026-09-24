@@ -1,0 +1,473 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import useAuth from '../hooks/useAuth';
+import {
+  User,
+  Mail,
+  Lock,
+  Phone,
+  Briefcase,
+  ArrowRight,
+  AlertCircle,
+  Building2,
+  ShieldCheck,
+  Headphones,
+  UserCheck,
+  CheckCircle2,
+  KeyRound,
+  RotateCw,
+} from 'lucide-react';
+
+const Register = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'Employee',
+    departmentName: 'Information Technology',
+    phone: '',
+    specialization: '',
+  });
+
+  const [verificationPending, setVerificationPending] = useState(false);
+  const [targetEmail, setTargetEmail] = useState('');
+  const [targetRole, setTargetRole] = useState('Employee');
+  const [otpCode, setOtpCode] = useState('');
+  const [devCode, setDevCode] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
+
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const { register, verifyEmail, resendCode } = useAuth();
+  const navigate = useNavigate();
+
+  // Resend cooldown timer
+  useEffect(() => {
+    let interval = null;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        departmentName: formData.departmentName,
+        phone: formData.phone,
+        specialization: formData.specialization,
+      });
+
+      setTargetEmail(res.email || formData.email);
+      setTargetRole(res.role || formData.role);
+      setDevCode(res.devCode || '');
+      setVerificationPending(true);
+      setResendTimer(60);
+      setSuccessMsg(res.message || `Verification code sent to ${formData.email}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setError('Please enter the 6-digit verification code');
+      return;
+    }
+
+    setError('');
+    setSubmitting(true);
+
+    try {
+      const user = await verifyEmail(targetEmail, otpCode.trim());
+      setSuccessMsg('Email verified successfully! Redirecting...');
+      setTimeout(() => {
+        if (user.role === 'Admin') navigate('/admin');
+        else if (user.role === 'Agent') navigate('/agent');
+        else navigate('/dashboard');
+      }, 900);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Verification failed. Please check the code.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendTimer > 0) return;
+    setError('');
+    try {
+      const res = await resendCode(targetEmail);
+      setDevCode(res.devCode || '');
+      setResendTimer(60);
+      setSuccessMsg(`New verification code sent to ${targetEmail}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend code');
+    }
+  };
+
+  return (
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-950 p-4 sm:p-6 lg:p-8 overflow-hidden">
+      {/* Decorative ambient blurred glow spheres */}
+      <div className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-indigo-600/15 blur-[130px] pointer-events-none" />
+      <div className="absolute top-1/2 -right-40 h-[520px] w-[520px] rounded-full bg-purple-600/15 blur-[130px] pointer-events-none" />
+      <div className="absolute -bottom-40 left-1/3 h-[420px] w-[420px] rounded-full bg-blue-600/10 blur-[110px] pointer-events-none" />
+
+      <div className={`relative w-full ${verificationPending ? 'max-w-md' : 'max-w-xl'} z-10 transition-all duration-300`}>
+        <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-slate-800 shadow-2xl backdrop-blur-2xl">
+          <div className="text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-600/30 scale-105">
+              <span className="font-mono text-2xl font-extrabold tracking-wider">IT</span>
+            </div>
+            <h1 className="mt-4 text-2xl font-extrabold text-white tracking-tight sm:text-3xl">
+              {verificationPending ? 'Verify Your Email' : 'Create Account'}
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-slate-400">
+              {verificationPending
+                ? 'Confirm your corporate email address to access your workspace'
+                : 'Join the IT Service Desk & Incident Management Portal'}
+            </p>
+          </div>
+
+          {error && (
+            <div className="mt-4 flex items-center gap-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-300 shadow-md">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="mt-4 flex items-center gap-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 shadow-md">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {verificationPending ? (
+            /* Email Verification Screen */
+            <form onSubmit={handleVerifySubmit} className="mt-6 space-y-4">
+              <div className="text-center rounded-2xl bg-indigo-950/40 border border-indigo-500/30 p-4">
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 mb-2">
+                  <Mail className="h-6 w-6 animate-pulse" />
+                </div>
+                <h3 className="text-base font-bold text-white">Enter 6-Digit Code</h3>
+                <p className="mt-1 text-xs text-slate-300">
+                  We sent a code to: <span className="font-mono font-bold text-indigo-300">{targetEmail}</span>
+                </p>
+                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Role: {targetRole}
+                </div>
+              </div>
+
+              {devCode && (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-center">
+                  <span className="text-[11px] text-amber-300 font-medium">
+                    ⚡ Quick Autofill Code:{' '}
+                    <button
+                      type="button"
+                      onClick={() => setOtpCode(devCode)}
+                      className="font-mono font-bold text-amber-200 underline hover:text-white"
+                    >
+                      {devCode}
+                    </button>
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                  Verification Code
+                </label>
+                <div className="relative">
+                  <KeyRound className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    className="w-full tracking-[8px] text-center font-mono text-lg font-bold rounded-2xl border border-slate-700/80 bg-slate-900/90 py-3 pl-10 pr-4 text-white placeholder-slate-600 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting || otpCode.length !== 6}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 text-xs sm:text-sm font-bold text-white shadow-xl shadow-emerald-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 transition-all"
+              >
+                {submitting ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <>
+                    <span>Verify & Activate Account</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-between text-xs text-slate-400 pt-2">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resendTimer > 0}
+                  className="flex items-center gap-1 font-semibold text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
+                >
+                  <RotateCw className={`h-3 w-3 ${resendTimer > 0 ? 'animate-spin' : ''}`} />
+                  <span>
+                    {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerificationPending(false);
+                    setOtpCode('');
+                    setError('');
+                  }}
+                  className="text-slate-400 hover:text-slate-200 underline"
+                >
+                  Edit details
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Registration Form for All Positions */
+            <form onSubmit={handleRegisterSubmit} className="mt-6 space-y-4">
+              {/* Role Selection */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                  Select System Role / Position
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'Employee' })}
+                    className={`flex flex-col items-center justify-center rounded-2xl border p-2.5 transition-all ${
+                      formData.role === 'Employee'
+                        ? 'border-sky-500 bg-sky-950/60 text-sky-200 ring-2 ring-sky-500/30'
+                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <UserCheck className="h-5 w-5 mb-1 text-sky-400" />
+                    <span className="text-xs font-bold">Employee</span>
+                    <span className="text-[10px] text-slate-500">Submit Issues</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'Agent' })}
+                    className={`flex flex-col items-center justify-center rounded-2xl border p-2.5 transition-all ${
+                      formData.role === 'Agent'
+                        ? 'border-emerald-500 bg-emerald-950/60 text-emerald-200 ring-2 ring-emerald-500/30'
+                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <Headphones className="h-5 w-5 mb-1 text-emerald-400" />
+                    <span className="text-xs font-bold">Support Agent</span>
+                    <span className="text-[10px] text-slate-500">Triage & Resolve</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'Admin' })}
+                    className={`flex flex-col items-center justify-center rounded-2xl border p-2.5 transition-all ${
+                      formData.role === 'Admin'
+                        ? 'border-indigo-500 bg-indigo-950/60 text-indigo-200 ring-2 ring-indigo-500/30'
+                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <ShieldCheck className="h-5 w-5 mb-1 text-indigo-400" />
+                    <span className="text-xs font-bold">Administrator</span>
+                    <span className="text-[10px] text-slate-500">Full System Control</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Name & Email */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Full Name</label>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="e.g. Alex Morgan"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Corporate Email</label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="alex@company.com"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Department & Phone */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Department</label>
+                  <div className="relative">
+                    <Building2 className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                    <select
+                      name="departmentName"
+                      value={formData.departmentName}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white focus:border-indigo-500 focus:outline-none"
+                    >
+                      <option value="Information Technology">Information Technology</option>
+                      <option value="Engineering">Engineering</option>
+                      <option value="Human Resources">Human Resources</option>
+                      <option value="Finance & Accounting">Finance & Accounting</option>
+                      <option value="Operations">Operations</option>
+                      <option value="Customer Support">Customer Support</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                    <input
+                      type="text"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="+1 (555) 012-3456"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {formData.role === 'Agent' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Specialization Domain</label>
+                  <div className="relative">
+                    <Briefcase className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                    <input
+                      type="text"
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleChange}
+                      placeholder="e.g. Network & Security, Cloud Infrastructure, Hardware"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Password & Confirm */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Password</label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                    <input
+                      type="password"
+                      name="password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Min 6 characters"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      required
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Repeat password"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 py-3.5 text-xs sm:text-sm font-bold text-white shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 transition-all"
+              >
+                {submitting ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <>
+                    <span>Save Details & Send Verification Email</span>
+                    <Mail className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          <div className="mt-5 text-center text-xs text-slate-400">
+            Already registered?{' '}
+            <Link to="/login" className="font-semibold text-indigo-400 hover:text-indigo-300">
+              Sign In
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Register;
