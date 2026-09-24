@@ -3,15 +3,17 @@ const nodemailer = require('nodemailer');
 let transporter = null;
 
 const initTransporter = () => {
-  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+  const host = process.env.SMTP_HOST || 'smtp.ethereal.email';
+  const user = process.env.SMTP_USER || 'oemjmobqejmz2sxo@ethereal.email';
+  const pass = process.env.SMTP_PASS || 'jrUzsK7tqvppbUPHgH';
+  const port = process.env.SMTP_PORT || 587;
+
+  if (host && user && pass) {
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+      host,
+      port: Number(port),
+      secure: process.env.SMTP_SECURE === 'true' || port == 465,
+      auth: { user, pass },
     });
   } else {
     // Development/Fallback mock transporter
@@ -105,6 +107,12 @@ const sendVerificationEmail = async ({ to, name, code, role }) => {
       text,
       html,
     });
+    if (info && nodemailer.getTestMessageUrl) {
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      if (previewUrl) {
+        console.log(`\n📬 [TEST EMAIL INBOX PREVIEW]: ${previewUrl}\n`);
+      }
+    }
     return info;
   } catch (error) {
     console.error('Verification email error:', error.message);

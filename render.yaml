@@ -21,5 +21,11 @@ services:
         value: mongodb+srv://akashmedhara_db_user:iTakYY27xvsocwIw@cluster0.a28b0zz.mongodb.net/servicedesk?retryWrites=true&w=majority
       - key: EMAIL_FROM
         value: '"IT Service Desk" <support@servicedesk.local>'
+      - key: SMTP_HOST
+        value: smtp.ethereal.email
       - key: SMTP_PORT
         value: 587
+      - key: SMTP_USER
+        value: oemjmobqejmz2sxo@ethereal.email
+      - key: SMTP_PASS
+        value: jrUzsK7tqvppbUPHgH
