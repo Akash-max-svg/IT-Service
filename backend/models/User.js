@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+const { normalizeRole } = require('../utils/roleUtils');
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -23,8 +25,9 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['Employee', 'Agent', 'Admin'],
+      enum: ['Employee', 'Agent', 'Admin', 'employee', 'support_agent', 'administrator', 'Support Agent', 'Administrator'],
       default: 'Employee',
+      set: (val) => normalizeRole(val),
     },
     department: {
       type: mongoose.Schema.Types.ObjectId,

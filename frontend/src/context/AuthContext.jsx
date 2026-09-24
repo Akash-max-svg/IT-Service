@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { authAPI, getSocket } from '../services/api';
+import { normalizeRole } from '../utils/roleUtils';
 
 export const AuthContext = createContext();
 
@@ -138,10 +139,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(merged));
   };
 
+  const userRole = normalizeRole(user?.role);
+  const isAdmin = userRole === 'Admin';
+  const isAgent = userRole === 'Agent' || userRole === 'Admin';
+  const isEmployee = userRole === 'Employee';
+
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: user ? { ...user, role: userRole } : null,
+        userRole,
         loading,
         login,
         register,
@@ -150,9 +157,9 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateUserState,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'Admin',
-        isAgent: ['Agent', 'Admin'].includes(user?.role),
-        isEmployee: user?.role === 'Employee',
+        isAdmin,
+        isAgent,
+        isEmployee,
       }}
     >
       {children}

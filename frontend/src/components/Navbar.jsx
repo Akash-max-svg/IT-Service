@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { notificationAPI, getSocket } from '../services/api';
+import { normalizeRole, getRoleDisplayName, getRoleBadgeStyle } from '../utils/roleUtils';
 import {
   Bell,
   Check,
@@ -84,23 +85,14 @@ const Navbar = ({ onToggleSidebar }) => {
     }
   };
 
-  const handleQuickSwitch = async (email, password) => {
-    try {
-      await login(email, password);
-      setShowUserMenu(false);
-      if (email.includes('admin')) navigate('/admin');
-      else if (email.includes('agent')) navigate('/agent');
-      else navigate('/dashboard');
-    } catch (err) {
-      console.error('Quick switch failed', err);
-    }
-  };
-
   const getRoleIcon = (role) => {
-    if (role === 'Admin') return <Shield className="h-3.5 w-3.5 text-indigo-400" />;
-    if (role === 'Agent') return <Headphones className="h-3.5 w-3.5 text-emerald-400" />;
+    const norm = normalizeRole(role);
+    if (norm === 'Admin') return <Shield className="h-3.5 w-3.5 text-indigo-400" />;
+    if (norm === 'Agent') return <Headphones className="h-3.5 w-3.5 text-emerald-400" />;
     return <Briefcase className="h-3.5 w-3.5 text-sky-400" />;
   };
+
+  const userRole = normalizeRole(user?.role);
 
   const filteredNotifications = filterUnreadOnly
     ? notifications.filter((n) => !n.isRead)
@@ -146,43 +138,15 @@ const Navbar = ({ onToggleSidebar }) => {
         </div>
       </div>
 
-      {/* Right Controls: Quick Switch, Notifications & User Menu */}
+      {/* Right Controls: Verified Role Badge, Notifications & User Menu */}
       <div className="flex items-center gap-3">
-        {/* Quick Role Switcher */}
-        <div className="hidden lg:flex items-center gap-1 rounded-xl bg-slate-900/90 p-1 border border-slate-800 shadow-inner">
-          <span className="px-2.5 text-slate-400 text-xs font-medium flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Demo Role:
+        {/* Verified User Role Badge (Non-editable, strict role visibility) */}
+        <div className="hidden sm:flex items-center gap-2 rounded-xl bg-slate-900/90 px-3.5 py-1.5 border border-slate-800 shadow-inner">
+          <span className="text-[11px] font-medium text-slate-400">Role:</span>
+          <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-xs font-bold ${getRoleBadgeStyle(userRole)}`}>
+            {getRoleIcon(userRole)}
+            <span>{getRoleDisplayName(userRole)}</span>
           </span>
-          <button
-            onClick={() => handleQuickSwitch('employee@servicedesk.com', 'Employee@123')}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-              user?.role === 'Employee'
-                ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow-md font-semibold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            Employee
-          </button>
-          <button
-            onClick={() => handleQuickSwitch('agent@servicedesk.com', 'Agent@123')}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-              user?.role === 'Agent'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md font-semibold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            Support Agent
-          </button>
-          <button
-            onClick={() => handleQuickSwitch('admin@servicedesk.com', 'Admin@123')}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-              user?.role === 'Admin'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md font-semibold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            Administrator
-          </button>
         </div>
 
         {/* Notifications Dropdown */}
@@ -293,8 +257,8 @@ const Navbar = ({ onToggleSidebar }) => {
             <div className="hidden text-left md:block">
               <div className="text-xs font-bold text-white leading-tight">{user?.name}</div>
               <div className="flex items-center gap-1.5 text-[11px] text-slate-400 leading-tight mt-0.5">
-                {getRoleIcon(user?.role)}
-                <span className="font-medium">{user?.role}</span>
+                {getRoleIcon(userRole)}
+                <span className="font-medium">{getRoleDisplayName(userRole)}</span>
               </div>
             </div>
             <ChevronDown className="h-4 w-4 text-slate-400" />

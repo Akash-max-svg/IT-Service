@@ -15,12 +15,13 @@ import {
   PhoneCall,
   Sparkles,
 } from 'lucide-react';
+import { normalizeRole } from '../utils/roleUtils';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const role = user?.role || 'Employee';
+  const role = normalizeRole(user?.role);
 
   const sections = [];
 

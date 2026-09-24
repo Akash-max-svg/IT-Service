@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import { normalizeRole, hasRole } from '../utils/roleUtils';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -21,10 +22,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect user to their own role dashboard
-    if (user.role === 'Admin') return <Navigate to="/admin" replace />;
-    if (user.role === 'Agent') return <Navigate to="/agent" replace />;
+  const role = normalizeRole(user.role);
+
+  if (allowedRoles && !hasRole(role, allowedRoles)) {
+    // Redirect user strictly to their own authorized role dashboard
+    if (role === 'Admin') return <Navigate to="/admin" replace />;
+    if (role === 'Agent') return <Navigate to="/agent" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 

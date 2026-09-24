@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 import { AuthProvider } from './context/AuthContext';
 import useAuth from './hooks/useAuth';
 import ProtectedRoute from './routes/ProtectedRoute';
+import { normalizeRole } from './utils/roleUtils';
 
 // Layout Components
 import Navbar from './components/Navbar';
@@ -42,8 +43,9 @@ const RootRedirect = () => {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'Admin') return <Navigate to="/admin" replace />;
-  if (user.role === 'Agent') return <Navigate to="/agent" replace />;
+  const role = normalizeRole(user.role);
+  if (role === 'Admin') return <Navigate to="/admin" replace />;
+  if (role === 'Agent') return <Navigate to="/agent" replace />;
   return <Navigate to="/dashboard" replace />;
 };
 

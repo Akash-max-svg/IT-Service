@@ -1,3 +1,5 @@
+const { hasRole } = require('../utils/roleUtils');
+
 // Role authorization middleware
 // Usage: authorize('Admin') or authorize('Admin', 'Agent')
 const authorize = (...roles) => {
@@ -6,7 +8,7 @@ const authorize = (...roles) => {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!hasRole(req.user.role, roles)) {
       return res.status(403).json({
         message: `Role '${req.user.role}' is not authorized to access this resource`,
       });
