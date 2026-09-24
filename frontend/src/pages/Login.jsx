@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import {
   Lock,
@@ -10,77 +10,61 @@ import {
   UserCheck,
   AlertCircle,
   Sparkles,
-  User,
-  Briefcase,
-  Phone,
-  Building2,
   CheckCircle2,
-  RotateCw,
-  KeyRound,
+  User,
+  Building2,
+  Phone,
+  Briefcase,
 } from 'lucide-react';
 
 const Login = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { login, register, verifyEmail, resendCode } = useAuth();
+  const { login, register } = useAuth();
 
-  // Mode: 'login' or 'register'
   const [activeTab, setActiveTab] = useState('login');
 
   // Login form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Register form state (supporting all positions: Admin, Agent, Employee)
+  // Register form state (supporting all roles: Employee, Agent, Admin)
   const [regData, setRegData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'Employee', // Employee | Agent | Admin
+    role: 'Employee',
     departmentName: 'Information Technology',
     phone: '',
     specialization: '',
   });
 
-  // Email verification state
-  const [verificationPending, setVerificationPending] = useState(false);
-  const [targetEmail, setTargetEmail] = useState('');
-  const [targetRole, setTargetRole] = useState('Employee');
-  const [otpCode, setOtpCode] = useState('');
-  const [devCode, setDevCode] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
-
-  // Status & feedback
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // If query string has ?tab=register, switch to register tab
+  // Check if routed with prefilled email or success message from registration
   useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMsg(location.state.successMessage);
+    }
+    if (location.state?.prefilledEmail) {
+      setEmail(location.state.prefilledEmail);
+    }
     const params = new URLSearchParams(location.search);
     if (params.get('tab') === 'register') {
       setActiveTab('register');
     }
-  }, [location.search]);
+  }, [location.state, location.search]);
 
-  // Resend cooldown timer effect
-  useEffect(() => {
-    let interval = null;
-    if (resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [resendTimer]);
-
+  // 1-Click Demo accounts that exist in MongoDB
   const handleQuickDemo = (demoEmail, demoPass) => {
     setActiveTab('login');
-    setVerificationPending(false);
     setEmail(demoEmail);
     setPassword(demoPass);
     setError('');
+    setSuccessMsg('');
   };
 
   const handleLoginSubmit = async (e) => {
@@ -90,22 +74,11 @@ const Login = () => {
     setSubmitting(true);
 
     try {
+      // POST /api/auth/login -> verifies against MongoDB with bcrypt.compare
       const user = await login(email, password);
       redirectByRole(user.role);
     } catch (err) {
-      const resData = err.response?.data;
-      if (resData?.requiresVerification) {
-        // Unverified email caught during login
-        setTargetEmail(resData.email || email);
-        setTargetRole(resData.role || 'Employee');
-        setDevCode(resData.devCode || '');
-        setVerificationPending(true);
-        setResendTimer(60);
-        setError('');
-        setSuccessMsg(resData.message || 'Please verify your email address to continue.');
-      } else {
-        setError(resData?.message || 'Login failed. Please verify your credentials.');
-      }
+      setError(err.response?.data?.message || 'Invalid email or password');
     } finally {
       setSubmitting(false);
     }
@@ -117,7 +90,7 @@ const Login = () => {
     setSuccessMsg('');
 
     if (regData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('Password must be at least 6 characters long');
       return;
     }
 
@@ -128,6 +101,7 @@ const Login = () => {
 
     setSubmitting(true);
     try {
+      // POST /api/auth/register -> hashes with bcrypt and stores in MongoDB
       const res = await register({
         name: regData.name,
         email: regData.email,
@@ -138,53 +112,15 @@ const Login = () => {
         specialization: regData.specialization,
       });
 
-      // Show verification step
-      setTargetEmail(res.email || regData.email);
-      setTargetRole(res.role || regData.role);
-      setDevCode(res.devCode || '');
-      setVerificationPending(true);
-      setResendTimer(60);
-      setSuccessMsg(res.message || `Verification code sent to ${regData.email}`);
+      // Switch to login tab and prefill the email
+      setEmail(regData.email);
+      setPassword('');
+      setActiveTab('login');
+      setSuccessMsg(res.message || 'Registration successful! Please sign in with your credentials.');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleVerifySubmit = async (e) => {
-    e.preventDefault();
-    if (!otpCode || otpCode.trim().length !== 6) {
-      setError('Please enter the complete 6-digit verification code');
-      return;
-    }
-
-    setError('');
-    setSubmitting(true);
-
-    try {
-      const verifiedUser = await verifyEmail(targetEmail, otpCode.trim());
-      setSuccessMsg('Email verified successfully! Redirecting...');
-      setTimeout(() => {
-        redirectByRole(verifiedUser.role || targetRole);
-      }, 900);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Verification failed. Please check the code.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendTimer > 0) return;
-    setError('');
-    try {
-      const res = await resendCode(targetEmail);
-      setDevCode(res.devCode || '');
-      setResendTimer(60);
-      setSuccessMsg(`New verification code sent to ${targetEmail}`);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resend code');
     }
   };
 
@@ -201,8 +137,7 @@ const Login = () => {
       <div className="absolute top-1/2 -right-40 h-[520px] w-[520px] rounded-full bg-purple-600/15 blur-[130px] pointer-events-none" />
       <div className="absolute -bottom-40 left-1/3 h-[420px] w-[420px] rounded-full bg-blue-600/10 blur-[110px] pointer-events-none" />
 
-      <div className={`relative w-full ${activeTab === 'register' && !verificationPending ? 'max-w-xl' : 'max-w-md'} z-10 transition-all duration-300`}>
-        {/* Main Card */}
+      <div className={`relative w-full ${activeTab === 'register' ? 'max-w-xl' : 'max-w-md'} z-10 transition-all duration-300`}>
         <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-slate-800 shadow-2xl backdrop-blur-2xl">
           {/* Header */}
           <div className="text-center">
@@ -217,48 +152,46 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Tab Switcher (Sign In vs Register) */}
-          {!verificationPending && (
-            <div className="mt-6 flex rounded-2xl bg-slate-900/90 p-1 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('login');
-                  setError('');
-                  setSuccessMsg('');
-                }}
-                className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
-                  activeTab === 'login'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('register');
-                  setError('');
-                  setSuccessMsg('');
-                }}
-                className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
-                  activeTab === 'register'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Register Account
-              </button>
-            </div>
-          )}
+          {/* Tab Switcher */}
+          <div className="mt-6 flex rounded-2xl bg-slate-900/90 p-1 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('login');
+                setError('');
+                setSuccessMsg('');
+              }}
+              className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
+                activeTab === 'login'
+                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('register');
+                setError('');
+                setSuccessMsg('');
+              }}
+              className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
+                activeTab === 'register'
+                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Register Account
+            </button>
+          </div>
 
-          {/* Quick Demo Logins Bar (Visible only on login tab) */}
-          {activeTab === 'login' && !verificationPending && (
+          {/* Quick Demo Logins Bar (Visible on login tab) */}
+          {activeTab === 'login' && (
             <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900/80 p-3 shadow-inner">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center flex items-center justify-center gap-1.5 font-mono">
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                <span>1-Click Demo Accounts</span>
+                <span>1-Click Demo Accounts (MongoDB Verified)</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -291,116 +224,21 @@ const Login = () => {
 
           {/* Feedback messages */}
           {error && (
-            <div className="mt-4 flex items-center gap-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-300 shadow-md">
+            <div className="mt-4 flex items-center gap-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-300 shadow-md animate-in fade-in">
               <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
               <span>{error}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="mt-4 flex items-center gap-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 shadow-md">
+            <div className="mt-4 flex items-center gap-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 shadow-md animate-in fade-in">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
               <span>{successMsg}</span>
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* 1. EMAIL VERIFICATION STEP (OTP Verification)            */}
-          {/* ======================================================== */}
-          {verificationPending ? (
-            <form onSubmit={handleVerifySubmit} className="mt-6 space-y-4">
-              <div className="text-center rounded-2xl bg-indigo-950/40 border border-indigo-500/30 p-4">
-                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 mb-2">
-                  <Mail className="h-6 w-6 animate-pulse" />
-                </div>
-                <h3 className="text-base font-bold text-white">Email Verification Code</h3>
-                <p className="mt-1 text-xs text-slate-300">
-                  We sent a 6-digit confirmation code to:
-                </p>
-                <p className="font-mono text-sm font-bold text-indigo-300 mt-0.5">{targetEmail}</p>
-                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Role: {targetRole}
-                </div>
-              </div>
-
-              {/* Dev mode preview helper */}
-              {devCode && (
-                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-center">
-                  <span className="text-[11px] text-amber-300 font-medium">
-                    ⚡ Quick Autofill Code:{' '}
-                    <button
-                      type="button"
-                      onClick={() => setOtpCode(devCode)}
-                      className="font-mono font-bold text-amber-200 underline hover:text-white"
-                    >
-                      {devCode}
-                    </button>
-                  </span>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  Enter 6-Digit Code
-                </label>
-                <div className="relative">
-                  <KeyRound className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="123456"
-                    className="w-full tracking-[8px] text-center font-mono text-lg font-bold rounded-2xl border border-slate-700/80 bg-slate-900/90 py-3 pl-10 pr-4 text-white placeholder-slate-600 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-inner"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting || otpCode.length !== 6}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 text-xs sm:text-sm font-bold text-white shadow-xl shadow-emerald-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 transition-all"
-              >
-                {submitting ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <span>Verify & Continue to ServiceDesk</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-2">
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={resendTimer > 0}
-                  className="flex items-center gap-1 font-semibold text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
-                >
-                  <RotateCw className={`h-3 w-3 ${resendTimer > 0 ? 'animate-spin' : ''}`} />
-                  <span>
-                    {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVerificationPending(false);
-                    setOtpCode('');
-                    setError('');
-                  }}
-                  className="text-slate-400 hover:text-slate-200 underline"
-                >
-                  Change email
-                </button>
-              </div>
-            </form>
-          ) : activeTab === 'login' ? (
-            /* ======================================================== */
-            /* 2. SIGN IN FORM                                          */
-            /* ======================================================== */
+          {activeTab === 'login' ? (
+            /* ==================== SIGN IN FORM ==================== */
             <form onSubmit={handleLoginSubmit} className="mt-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
@@ -452,7 +290,7 @@ const Login = () => {
               </button>
 
               <div className="mt-5 text-center text-xs text-slate-400">
-                Need an account?{' '}
+                Don't have an account?{' '}
                 <button
                   type="button"
                   onClick={() => {
@@ -461,19 +299,17 @@ const Login = () => {
                   }}
                   className="font-bold text-indigo-400 hover:text-indigo-300"
                 >
-                  Register here (Admin, Agent, Employee)
+                  Create one now
                 </button>
               </div>
             </form>
           ) : (
-            /* ======================================================== */
-            /* 3. REGISTER FORM FOR ALL POSITIONS                       */
-            /* ======================================================== */
+            /* ==================== REGISTER FORM ==================== */
             <form onSubmit={handleRegisterSubmit} className="mt-5 space-y-4">
-              {/* Role Selection Badge Cards */}
+              {/* Role Selection */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  Select System Role / Position
+                  Select Your Role / Position
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
@@ -553,7 +389,7 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Department & Specialization (if agent) */}
+              {/* Department & Phone */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1.5">Department</label>
@@ -625,7 +461,7 @@ const Login = () => {
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1.5">Confirm Password</label>
                   <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                    <Lock className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
                     <input
                       type="password"
                       required
@@ -647,8 +483,8 @@ const Login = () => {
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
                   <>
-                    <span>Save Details & Send Verification Email</span>
-                    <Mail className="h-4 w-4" />
+                    <span>Create Account in MongoDB</span>
+                    <ArrowRight className="h-4 w-4" />
                   </>
                 )}
               </button>
