@@ -4,9 +4,14 @@ const Feedback = require('../models/Feedback');
 const User = require('../models/User');
 const generateTicketNumber = require('../utils/generateTicketNumber');
 const { calculateDeadlines, evaluateBreachStatus } = require('../services/slaService');
-const { sendNotification, broadcastToSupport } = require('../services/notificationService');
+const {
+  sendNotification,
+  broadcastToSupport,
+  broadcastTicketUpdate,
+  emitToTicket,
+} = require('../services/notificationService');
 const { sendTicketEmail } = require('../services/emailService');
-const { normalizeRole } = require('../utils/roleUtils');
+const { normalizeRole, hasRole } = require('../utils/roleUtils');
 
 // @desc    Create a new incident ticket
 // @route   POST /api/tickets
@@ -285,12 +290,16 @@ const updateTicketStatus = async (req, res) => {
 
     if (status === 'CLOSED') {
       ticket.closedAt = new Date();
+      if (!ticket.resolvedAt) {
+        ticket.resolvedAt = new Date();
+      }
     }
 
     if (status === 'REOPENED') {
       ticket.reopenedAt = new Date();
-      ticket.reopenedCount += 1;
+      ticket.reopenedCount = (ticket.reopenedCount || 0) + 1;
       ticket.status = 'REOPENED';
+      ticket.closedAt = null;
     }
 
     await ticket.save();
@@ -329,17 +338,45 @@ const updateTicketStatus = async (req, res) => {
       });
     }
 
-    // Notify agent if employee reopened
-    if (status === 'REOPENED' && ticket.assignedTo) {
+    // Notify agent if employee closed ticket
+    if (status === 'CLOSED' && ticket.assignedTo && req.user._id.toString() !== ticket.assignedTo._id.toString()) {
       await sendNotification({
         recipientId: ticket.assignedTo._id,
         senderId: req.user._id,
         ticketId: ticket._id,
-        title: `Ticket Reopened: ${ticket.ticketNumber}`,
-        message: `${req.user.name} reported that the issue still exists.`,
-        type: 'REOPENED',
+        title: `Incident Closed: ${ticket.ticketNumber}`,
+        message: `${req.user.name} confirmed resolution and closed incident ticket ${ticket.ticketNumber}.`,
+        type: 'STATUS_CHANGED',
       });
     }
+
+    // Notify agent or support pool if employee reopened
+    if (status === 'REOPENED') {
+      if (ticket.assignedTo) {
+        await sendNotification({
+          recipientId: ticket.assignedTo._id,
+          senderId: req.user._id,
+          ticketId: ticket._id,
+          title: `Ticket Reopened: ${ticket.ticketNumber}`,
+          message: `${req.user.name} reported that the problem still exists. ${note || ''}`,
+          type: 'REOPENED',
+        });
+      }
+      broadcastToSupport('ticket_reopened', {
+        ticketId: ticket._id,
+        ticketNumber: ticket.ticketNumber,
+        title: ticket.title,
+        priority: ticket.priority,
+      });
+    }
+
+    // Real-time broadcast to ticket room and support team
+    broadcastTicketUpdate(ticket._id, 'ticket_updated', {
+      ticketId: ticket._id,
+      ticketNumber: ticket.ticketNumber,
+      status: ticket.status,
+      resolutionNotes: ticket.resolutionNotes,
+    });
 
     const updated = await Ticket.findById(ticket._id)
       .populate('createdBy', 'name email departmentName avatar')
@@ -367,7 +404,7 @@ const assignTicket = async (req, res) => {
     const targetAgentId = agentId || req.user._id;
     const agent = await User.findById(targetAgentId);
 
-    if (!agent || !['Agent', 'Admin'].includes(agent.role)) {
+    if (!agent || !hasRole(agent.role, ['Agent', 'Admin'])) {
       return res.status(400).json({ message: 'Selected user is not a valid support agent' });
     }
 
@@ -414,6 +451,19 @@ const assignTicket = async (req, res) => {
       title: `Agent Assigned: ${agent.name}`,
       message: `${agent.name} has been assigned to your ticket ${ticket.ticketNumber}.`,
       type: 'ASSIGNED',
+    });
+
+    // Real-time broadcast
+    broadcastTicketUpdate(ticket._id, 'ticket_updated', {
+      ticketId: ticket._id,
+      ticketNumber: ticket.ticketNumber,
+      status: ticket.status,
+      assignedTo: {
+        _id: agent._id,
+        name: agent.name,
+        email: agent.email,
+        specialization: agent.specialization,
+      },
     });
 
     const updated = await Ticket.findById(ticket._id)
@@ -520,6 +570,12 @@ const submitFeedback = async (req, res) => {
       performedBy: req.user._id,
       action: 'CLOSED',
       notes: `Ticket closed with feedback rating: ${rating}/5 stars`,
+    });
+
+    broadcastTicketUpdate(ticket._id, 'ticket_updated', {
+      ticketId: ticket._id,
+      ticketNumber: ticket.ticketNumber,
+      status: 'CLOSED',
     });
 
     res.status(201).json({ feedback, ticket });

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { ticketAPI, commentAPI, userAPI, getSocket, getFileUrl } from '../services/api';
+import { normalizeRole, hasRole } from '../utils/roleUtils';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
 import SLAIndicator from '../components/SLAIndicator';
@@ -28,6 +29,9 @@ import {
   MessageSquare,
   History,
   Info,
+  CheckCircle,
+  HelpCircle,
+  UserCheck,
 } from 'lucide-react';
 
 const LIFECYCLE_STEPS = ['OPEN', 'ASSIGNED', 'IN PROGRESS', 'RESOLVED', 'CLOSED'];
@@ -44,6 +48,7 @@ const TicketDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Comment state
   const [commentText, setCommentText] = useState('');
@@ -54,6 +59,8 @@ const TicketDetails = () => {
   // Modals & form toggles
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [reopenNote, setReopenNote] = useState('');
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalationReason, setEscalationReason] = useState('');
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -74,7 +81,8 @@ const TicketDetails = () => {
       setAuditLogs(ticketData.auditLogs || []);
       setComments(commentsData || []);
 
-      if (['Agent', 'Admin'].includes(user?.role)) {
+      const userRole = normalizeRole(user?.role);
+      if (['Agent', 'Admin'].includes(userRole)) {
         const { data: agentList } = await userAPI.getAgents();
         setAgents(agentList || []);
       }
@@ -96,10 +104,16 @@ const TicketDetails = () => {
     };
 
     socket.on('notification', handleUpdate);
+    socket.on('ticket_updated', handleUpdate);
+    socket.on('new_comment', handleUpdate);
+    socket.on('ticket_reopened', handleUpdate);
 
     return () => {
       socket.emit('leave_ticket', id);
       socket.off('notification', handleUpdate);
+      socket.off('ticket_updated', handleUpdate);
+      socket.off('new_comment', handleUpdate);
+      socket.off('ticket_reopened', handleUpdate);
     };
   }, [id]);
 
@@ -150,6 +164,34 @@ const TicketDetails = () => {
       fetchTicketData();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const handleConfirmClose = async () => {
+    setActionLoading(true);
+    try {
+      await handleStatusChange('CLOSED', 'Problem verified and confirmed solved by employee');
+      if (!ticket?.feedback) {
+        setShowFeedbackModal(true);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to close incident');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReopenSubmit = async (e) => {
+    e.preventDefault();
+    setActionLoading(true);
+    try {
+      await handleStatusChange('REOPENED', reopenNote || 'Employee marked: Problem still exists');
+      setShowReopenModal(false);
+      setReopenNote('');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reopen incident');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -219,8 +261,17 @@ const TicketDetails = () => {
     );
   }
 
-  const isEmployeeCreator = user?._id === ticket.createdBy?._id;
-  const isSupportStaff = ['Agent', 'Admin'].includes(user?.role);
+  const userRole = normalizeRole(user?.role);
+  const isSupportStaff = ['Agent', 'Admin'].includes(userRole);
+  const isAdmin = userRole === 'Admin';
+  const isAgent = userRole === 'Agent';
+  const isEmployee = userRole === 'Employee';
+
+  const currentUserId = (user?._id || user?.id)?.toString();
+  const creatorId = (ticket.createdBy?._id || ticket.createdBy)?.toString();
+  const isEmployeeCreator = Boolean(currentUserId && creatorId && currentUserId === creatorId);
+  const isAssignedToMe = Boolean(currentUserId && (ticket.assignedTo?._id || ticket.assignedTo)?.toString() === currentUserId);
+
   const currentStepIdx = LIFECYCLE_STEPS.indexOf(
     ticket.status === 'REOPENED' ? 'IN PROGRESS' : ticket.status === 'WAITING FOR USER' ? 'IN PROGRESS' : ticket.status
   );
@@ -264,18 +315,39 @@ const TicketDetails = () => {
 
         {/* Action Controls for Staff & Creator */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Admin Direct Agent Assignment */}
+          {isAdmin && (
+            <div className="flex items-center gap-2 rounded-xl bg-slate-900 border border-indigo-500/40 px-3 py-1.5 shadow-sm">
+              <UserCheck className="h-4 w-4 text-indigo-400" />
+              <span className="text-xs font-bold text-slate-300">Assign:</span>
+              <select
+                value={ticket.assignedTo?._id || ''}
+                onChange={(e) => handleAssign(e.target.value)}
+                className="bg-transparent text-xs font-bold text-indigo-300 focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="" className="bg-slate-900 text-slate-400">Unassigned</option>
+                {agents.map((ag) => (
+                  <option key={ag._id} value={ag._id} className="bg-slate-900 text-white">
+                    {ag.name} ({ag.specialization || ag.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Support Staff Claim & Workflow Controls */}
           {isSupportStaff && (
             <>
-              {ticket.assignedTo?._id !== user._id && (
+              {ticket.assignedTo?._id !== user._id && !isAdmin && (
                 <button
                   onClick={() => handleAssign(user._id)}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-950/40 px-3.5 py-2 text-xs font-bold text-indigo-300 hover:bg-indigo-900/60 shadow-sm"
                 >
-                  <User className="h-3.5 w-3.5" /> Claim Ticket
+                  <User className="h-3.5 w-3.5" /> Claim Incident
                 </button>
               )}
 
-              {['OPEN', 'ASSIGNED'].includes(ticket.status) && (
+              {['OPEN', 'ASSIGNED', 'REOPENED'].includes(ticket.status) && (
                 <button
                   onClick={() => handleStatusChange('IN PROGRESS')}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-amber-600/30 hover:brightness-110 transition-all"
@@ -284,14 +356,24 @@ const TicketDetails = () => {
                 </button>
               )}
 
-              {ticket.status === 'IN PROGRESS' && (
+              {['IN PROGRESS', 'WAITING FOR USER'].includes(ticket.status) && (
                 <>
-                  <button
-                    onClick={() => handleStatusChange('WAITING FOR USER')}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-950/40 px-3.5 py-2 text-xs font-bold text-purple-300 hover:bg-purple-900/60 transition-colors"
-                  >
-                    Need User Info
-                  </button>
+                  {ticket.status === 'IN PROGRESS' && (
+                    <button
+                      onClick={() => handleStatusChange('WAITING FOR USER')}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-950/40 px-3.5 py-2 text-xs font-bold text-purple-300 hover:bg-purple-900/60 transition-colors"
+                    >
+                      Need User Info
+                    </button>
+                  )}
+                  {ticket.status === 'WAITING FOR USER' && (
+                    <button
+                      onClick={() => handleStatusChange('IN PROGRESS')}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500"
+                    >
+                      Resume Progress
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowEscalateModal(true)}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/40 px-3.5 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/60 transition-colors"
@@ -302,38 +384,50 @@ const TicketDetails = () => {
                     onClick={() => setShowResolveModal(true)}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 hover:brightness-110 transition-all"
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Resolve Incident
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Mark Resolved
                   </button>
                 </>
-              )}
-
-              {ticket.status === 'WAITING FOR USER' && (
-                <button
-                  onClick={() => handleStatusChange('IN PROGRESS')}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500"
-                >
-                  Resume Progress
-                </button>
               )}
             </>
           )}
 
-          {/* Employee Reopen or CSAT Rating */}
+          {/* Employee Resolution Verification & Close Actions */}
           {isEmployeeCreator && ticket.status === 'RESOLVED' && (
-            <>
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => handleStatusChange('REOPENED', 'Employee marked: Problem still exists')}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/50 bg-orange-950/40 px-4 py-2 text-xs font-bold text-orange-300 hover:bg-orange-900/50"
+                onClick={() => setShowReopenModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-500/50 bg-orange-950/40 px-4 py-2 text-xs font-bold text-orange-300 hover:bg-orange-900/50 shadow-md transition-all"
               >
-                <RotateCcw className="h-3.5 w-3.5" /> Issue Still Exists (Reopen)
+                <RotateCcw className="h-3.5 w-3.5" /> Issue Not Fixed (Reopen)
               </button>
               <button
-                onClick={() => setShowFeedbackModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 hover:brightness-110"
+                onClick={handleConfirmClose}
+                disabled={actionLoading}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 hover:brightness-110 transition-all"
               >
-                <Star className="h-3.5 w-3.5 fill-white" /> Rate & Accept Resolution
+                <Check className="h-3.5 w-3.5 stroke-[3]" /> Confirm Solved (Close)
               </button>
-            </>
+            </div>
+          )}
+
+          {/* Employee Closed State Actions */}
+          {isEmployeeCreator && ticket.status === 'CLOSED' && (
+            <div className="flex items-center gap-2">
+              {!ticket.feedback && (
+                <button
+                  onClick={() => setShowFeedbackModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-950/40 px-3.5 py-2 text-xs font-bold text-amber-300 hover:bg-amber-900/50"
+                >
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> Rate Experience
+                </button>
+              )}
+              <button
+                onClick={() => setShowReopenModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Reopen Ticket
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -352,6 +446,11 @@ const TicketDetails = () => {
           {ticket.status === 'REOPENED' && (
             <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 px-3 py-0.5 text-xs font-bold text-orange-300 border border-orange-500/30">
               <RotateCcw className="h-3.5 w-3.5" /> Reopened ({ticket.reopenedCount}x)
+            </span>
+          )}
+          {ticket.status === 'CLOSED' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-0.5 text-xs font-bold text-emerald-300 border border-emerald-500/30">
+              <Check className="h-3.5 w-3.5" /> Incident Fully Resolved & Closed
             </span>
           )}
         </div>
@@ -392,6 +491,125 @@ const TicketDetails = () => {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left 2 Cols: Description, Attachments, Comments */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Prominent Resolution Verification Card (when ticket is RESOLVED) */}
+          {ticket.status === 'RESOLVED' && (
+            <div className="rounded-3xl border-2 border-emerald-500/60 bg-gradient-to-br from-emerald-950/70 via-slate-900 to-slate-950 p-6 shadow-2xl relative overflow-hidden animate-in fade-in">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/40 mb-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    <span>Solution Deployed • Confirmation Needed</span>
+                  </div>
+                  <h3 className="text-base font-extrabold text-white">
+                    Support Specialist Marked This Incident as Resolved
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
+                    Please test and confirm that your problem has been solved. When confirmed, click below to close the ticket. If the issue is not solved, you can reopen it so the specialist continues working.
+                  </p>
+                </div>
+
+                {isEmployeeCreator && (
+                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                    <button
+                      onClick={() => setShowReopenModal(true)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-orange-500/50 bg-orange-950/40 px-4 py-2.5 text-xs font-bold text-orange-300 hover:bg-orange-900/60 hover:text-white transition-all shadow-md"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      <span>Issue Not Fixed (Reopen)</span>
+                    </button>
+                    <button
+                      onClick={handleConfirmClose}
+                      disabled={actionLoading}
+                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-xs font-bold text-white shadow-xl shadow-emerald-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    >
+                      <Check className="h-4 w-4 stroke-[3]" />
+                      <span>Confirm Solved (Close Ticket)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {ticket.resolutionNotes && (
+                <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-4">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                    Resolution Summary & Diagnostic Fix:
+                  </span>
+                  <p className="mt-1 text-xs text-slate-100 leading-relaxed font-sans whitespace-pre-wrap">
+                    {ticket.resolutionNotes}
+                  </p>
+                  {ticket.resolvedAt && (
+                    <p className="mt-2 text-[10px] text-emerald-400 font-mono">
+                      Resolved on: {new Date(ticket.resolvedAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Incident Closed Confirmation Card */}
+          {ticket.status === 'CLOSED' && (
+            <div className="rounded-3xl border border-slate-700/80 bg-slate-900/80 p-5 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Incident Confirmed Solved & Closed</h4>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {ticket.closedAt ? `Closed on ${new Date(ticket.closedAt).toLocaleString()}` : 'Marked as closed'}
+                    {ticket.feedback && ' • CSAT Rating Verified'}
+                  </p>
+                </div>
+              </div>
+              {isEmployeeCreator && (
+                <div className="flex items-center gap-2">
+                  {!ticket.feedback && (
+                    <button
+                      onClick={() => setShowFeedbackModal(true)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3.5 py-2 text-xs font-bold text-amber-300 hover:bg-amber-900/50"
+                    >
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                      <span>Rate Experience</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowReopenModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span>Reopen Ticket</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Reopened Alert Banner */}
+          {ticket.status === 'REOPENED' && (
+            <div className="rounded-3xl border border-orange-500/40 bg-orange-950/30 p-5 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-orange-500/10 text-orange-400 border border-orange-500/20 flex items-center justify-center shrink-0">
+                  <RotateCcw className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-orange-300">Incident Reopened by Employee</h4>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    The employee reported that the issue was not fully solved. Specialist diagnosis required. Reopened count: {ticket.reopenedCount || 1}.
+                  </p>
+                </div>
+              </div>
+              {isSupportStaff && (
+                <button
+                  onClick={() => handleStatusChange('IN PROGRESS')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-500 shadow-md"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Resume Diagnosis</span>
+                </button>
+              )}
+            </div>
+          )}
           {/* Incident Description Card */}
           <div className="glass-panel rounded-3xl p-6 border border-slate-800/80 shadow-xl space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -997,6 +1215,49 @@ const TicketDetails = () => {
                   className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 shadow-lg shadow-emerald-600/30"
                 >
                   Submit & Close Ticket
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reopen Incident Modal */}
+      {showReopenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-orange-500/40 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center gap-2 text-orange-400 mb-2">
+              <RotateCcw className="h-6 w-6" />
+              <h3 className="text-lg font-bold text-white">Reopen Incident Ticket</h3>
+            </div>
+            <p className="text-xs text-slate-400 mb-4">
+              Please specify what is still malfunctioning or why the issue is not resolved. Our support team will be immediately notified.
+            </p>
+
+            <form onSubmit={handleReopenSubmit} className="space-y-4">
+              <textarea
+                rows={3}
+                required
+                value={reopenNote}
+                onChange={(e) => setReopenNote(e.target.value)}
+                placeholder="Describe what is still not working (e.g. Device boots but monitor doesn't detect signal, error code still appears...)"
+                className="w-full rounded-2xl border border-slate-700 bg-slate-800 p-3.5 text-xs text-white placeholder-slate-500 focus:border-orange-500 focus:outline-none"
+              />
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReopenModal(false)}
+                  className="rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-400 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 shadow-lg shadow-orange-600/30 transition-all"
+                >
+                  {actionLoading ? 'Reopening...' : 'Confirm Reopen Ticket'}
                 </button>
               </div>
             </form>

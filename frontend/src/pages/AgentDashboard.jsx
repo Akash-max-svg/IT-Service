@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { ticketAPI, getSocket } from '../services/api';
+import { normalizeRole } from '../utils/roleUtils';
 import TicketTable from '../components/TicketTable';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
@@ -18,6 +19,7 @@ import {
   Activity,
   Flame,
   ArrowRight,
+  RotateCcw,
 } from 'lucide-react';
 
 const AgentDashboard = () => {
@@ -50,21 +52,32 @@ const AgentDashboard = () => {
 
     socket.on('new_ticket', handleUpdate);
     socket.on('ticket_escalated', handleUpdate);
+    socket.on('ticket_updated', handleUpdate);
+    socket.on('ticket_reopened', handleUpdate);
     socket.on('notification', handleUpdate);
 
     return () => {
       socket.off('new_ticket', handleUpdate);
       socket.off('ticket_escalated', handleUpdate);
+      socket.off('ticket_updated', handleUpdate);
+      socket.off('ticket_reopened', handleUpdate);
       socket.off('notification', handleUpdate);
     };
   }, []);
 
+  const currentUserId = (user?._id || user?.id)?.toString();
+  const isAssignedToUser = (t) => (t.assignedTo?._id || t.assignedTo)?.toString() === currentUserId;
+
   const myAssignedTickets = tickets.filter(
-    (t) => t.assignedTo?._id === user?._id && !['RESOLVED', 'CLOSED'].includes(t.status)
+    (t) => isAssignedToUser(t) && !['RESOLVED', 'CLOSED'].includes(t.status)
   );
 
   const unassignedTickets = tickets.filter(
     (t) => !t.assignedTo && ['OPEN', 'REOPENED'].includes(t.status)
+  );
+
+  const reopenedTickets = tickets.filter(
+    (t) => t.status === 'REOPENED' && (isAssignedToUser(t) || !t.assignedTo)
   );
 
   const escalatedTickets = tickets.filter((t) => t.status === 'ESCALATED');
@@ -73,16 +86,24 @@ const AgentDashboard = () => {
     (t) => (t.isResponseBreached || t.isResolutionBreached) && !['RESOLVED', 'CLOSED'].includes(t.status)
   );
 
+  const resolvedTickets = tickets.filter(
+    (t) => isAssignedToUser(t) && ['RESOLVED', 'CLOSED'].includes(t.status)
+  );
+
   const getFilteredTickets = () => {
     switch (activeQueueTab) {
       case 'my-assigned':
         return myAssignedTickets;
       case 'unassigned':
         return unassignedTickets;
+      case 'reopened':
+        return reopenedTickets;
       case 'escalated':
         return escalatedTickets;
       case 'breached':
         return breachedTickets;
+      case 'resolved':
+        return resolvedTickets;
       default:
         return tickets;
     }
@@ -244,6 +265,16 @@ const AgentDashboard = () => {
               Unassigned Pool ({unassignedTickets.length})
             </button>
             <button
+              onClick={() => setActiveQueueTab('reopened')}
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                activeQueueTab === 'reopened'
+                  ? 'bg-orange-600 text-white shadow-md shadow-orange-600/30'
+                  : 'bg-slate-800/80 text-slate-400 hover:text-white'
+              }`}
+            >
+              Reopened ({reopenedTickets.length})
+            </button>
+            <button
               onClick={() => setActiveQueueTab('escalated')}
               className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
                 activeQueueTab === 'escalated'
@@ -262,6 +293,16 @@ const AgentDashboard = () => {
               }`}
             >
               Breached SLA ({breachedTickets.length})
+            </button>
+            <button
+              onClick={() => setActiveQueueTab('resolved')}
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                activeQueueTab === 'resolved'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'bg-slate-800/80 text-slate-400 hover:text-white'
+              }`}
+            >
+              Resolved ({resolvedTickets.length})
             </button>
           </div>
 

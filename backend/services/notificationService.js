@@ -54,8 +54,32 @@ const broadcastToSupport = (event, payload) => {
   }
 };
 
+/**
+ * Emit event to users currently viewing a specific ticket
+ */
+const emitToTicket = (ticketId, event, payload) => {
+  if (ioInstance && ticketId) {
+    ioInstance.to(`ticket_${ticketId.toString()}`).emit(event, payload);
+  }
+};
+
+/**
+ * Broadcast update to ticket collaboration room and support team
+ */
+const broadcastTicketUpdate = (ticketId, event, payload) => {
+  if (ioInstance) {
+    if (ticketId) {
+      ioInstance.to(`ticket_${ticketId.toString()}`).emit(event, payload);
+    }
+    ioInstance.to('support_team').emit(event, payload);
+  }
+};
+
 module.exports = {
   setSocketIO,
   sendNotification,
   broadcastToSupport,
+  emitToTicket,
+  broadcastTicketUpdate,
 };
+

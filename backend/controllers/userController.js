@@ -34,7 +34,16 @@ const getAllUsers = async (req, res) => {
 const getAgents = async (req, res) => {
   try {
     const agents = await User.find({
-      role: { $in: ['Agent', 'Admin'] },
+      role: {
+        $in: [
+          'Agent',
+          'Admin',
+          'support_agent',
+          'administrator',
+          'Support Agent',
+          'Administrator',
+        ],
+      },
       isActive: true,
     })
       .select('name email role specialization departmentName avatar')

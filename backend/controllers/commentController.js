@@ -1,7 +1,8 @@
 const Comment = require('../models/Comment');
 const Ticket = require('../models/Ticket');
 const AuditLog = require('../models/AuditLog');
-const { sendNotification } = require('../services/notificationService');
+const { sendNotification, broadcastTicketUpdate } = require('../services/notificationService');
+const { normalizeRole, hasRole } = require('../utils/roleUtils');
 
 // @desc    Add comment to a ticket
 // @route   POST /api/comments
@@ -19,11 +20,13 @@ const addComment = async (req, res) => {
       return res.status(404).json({ message: 'Ticket not found' });
     }
 
+    const userRole = normalizeRole(req.user.role);
+
     // Role check: Employee cannot post internal notes
-    const internalNoteFlag = req.user.role !== 'Employee' && isInternalNote === true;
+    const internalNoteFlag = userRole !== 'Employee' && isInternalNote === true;
 
     // Check Employee access
-    if (req.user.role === 'Employee' && ticket.createdBy.toString() !== req.user._id.toString()) {
+    if (userRole === 'Employee' && ticket.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -46,12 +49,18 @@ const addComment = async (req, res) => {
     });
 
     // Mark first response time if agent commented and not yet responded
-    if (['Agent', 'Admin'].includes(req.user.role) && !ticket.respondedAt) {
+    if (hasRole(req.user.role, ['Agent', 'Admin']) && !ticket.respondedAt) {
       ticket.respondedAt = new Date();
       if (ticket.status === 'OPEN') {
         ticket.status = 'IN PROGRESS';
       }
       await ticket.save();
+
+      broadcastTicketUpdate(ticket._id, 'ticket_updated', {
+        ticketId: ticket._id,
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+      });
     }
 
     // Audit log
@@ -64,7 +73,7 @@ const addComment = async (req, res) => {
 
     // Notify counterpart
     if (!internalNoteFlag) {
-      if (req.user.role === 'Employee' && ticket.assignedTo) {
+      if (userRole === 'Employee' && ticket.assignedTo) {
         // Notify assigned agent
         await sendNotification({
           recipientId: ticket.assignedTo,
@@ -74,7 +83,7 @@ const addComment = async (req, res) => {
           message: `${req.user.name}: "${message.substring(0, 75)}"`,
           type: 'COMMENT_ADDED',
         });
-      } else if (['Agent', 'Admin'].includes(req.user.role)) {
+      } else if (hasRole(req.user.role, ['Agent', 'Admin'])) {
         // Notify employee
         await sendNotification({
           recipientId: ticket.createdBy,
@@ -88,6 +97,9 @@ const addComment = async (req, res) => {
     }
 
     const populated = await Comment.findById(comment._id).populate('user', 'name role avatar');
+
+    // Real-time broadcast to ticket discussion room
+    broadcastTicketUpdate(ticket._id, 'new_comment', populated);
 
     res.status(201).json(populated);
   } catch (error) {

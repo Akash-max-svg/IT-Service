@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { adminAPI } from '../services/api';
+import { adminAPI, getSocket } from '../services/api';
 import {
   ResponsiveContainer,
   BarChart,
@@ -42,19 +42,39 @@ const AdminDashboard = () => {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const loadMetrics = async () => {
+    try {
+      setLoading(true);
+      const { data } = await adminAPI.getMetrics();
+      setMetrics(data);
+    } catch (err) {
+      console.error('Failed to load admin metrics', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadMetrics = async () => {
-      try {
-        setLoading(true);
-        const { data } = await adminAPI.getMetrics();
-        setMetrics(data);
-      } catch (err) {
-        console.error('Failed to load admin metrics', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadMetrics();
+
+    const socket = getSocket();
+    const handleUpdate = () => {
+      loadMetrics();
+    };
+
+    socket.on('new_ticket', handleUpdate);
+    socket.on('ticket_updated', handleUpdate);
+    socket.on('ticket_escalated', handleUpdate);
+    socket.on('ticket_reopened', handleUpdate);
+    socket.on('notification', handleUpdate);
+
+    return () => {
+      socket.off('new_ticket', handleUpdate);
+      socket.off('ticket_updated', handleUpdate);
+      socket.off('ticket_escalated', handleUpdate);
+      socket.off('ticket_reopened', handleUpdate);
+      socket.off('notification', handleUpdate);
+    };
   }, []);
 
   if (loading) {
@@ -102,6 +122,13 @@ const AdminDashboard = () => {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
+              onClick={() => navigate('/my-tickets')}
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3 text-xs font-bold text-white shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <Inbox className="h-4 w-4" />
+              <span>View All Incidents</span>
+            </button>
+            <button
               onClick={() => navigate('/users')}
               className="inline-flex items-center gap-2 rounded-2xl border border-slate-700/80 bg-slate-800/80 px-4 py-3 text-xs font-bold text-slate-200 hover:bg-slate-700/80 shadow-md transition-colors"
             >
@@ -110,10 +137,10 @@ const AdminDashboard = () => {
             </button>
             <button
               onClick={() => navigate('/reports')}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3 text-xs font-bold text-white shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-700/80 bg-slate-800/80 px-4 py-3 text-xs font-bold text-slate-200 hover:bg-slate-700/80 shadow-md transition-colors"
             >
-              <TrendingUp className="h-4 w-4" />
-              <span>Full SLA Reports</span>
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
+              <span>SLA Reports</span>
             </button>
           </div>
         </div>
@@ -121,26 +148,35 @@ const AdminDashboard = () => {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <div className="glass-card rounded-2xl p-4 border border-slate-800/80">
+        <div
+          onClick={() => navigate('/my-tickets')}
+          className="glass-card cursor-pointer rounded-2xl p-4 border border-slate-800/80 hover:border-indigo-500/50 transition-all hover:scale-[1.02]"
+        >
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Volume</span>
           <p className="mt-2 text-2xl font-extrabold text-white font-mono">{counts.totalTickets || 0}</p>
-          <span className="text-[10px] text-slate-500 font-medium">Logged incidents</span>
+          <span className="text-[10px] text-slate-500 font-medium">Logged incidents →</span>
         </div>
 
-        <div className="glass-card rounded-2xl p-4 border border-slate-800/80">
+        <div
+          onClick={() => navigate('/my-tickets')}
+          className="glass-card cursor-pointer rounded-2xl p-4 border border-slate-800/80 hover:border-amber-500/50 transition-all hover:scale-[1.02]"
+        >
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active Queue</span>
           <p className="mt-2 text-2xl font-extrabold text-amber-400 font-mono">
             {(counts.openTickets || 0) + (counts.inProgressTickets || 0)}
           </p>
-          <span className="text-[10px] text-slate-500 font-medium">Needs resolution</span>
+          <span className="text-[10px] text-slate-500 font-medium">Needs resolution →</span>
         </div>
 
-        <div className="glass-card rounded-2xl p-4 border border-slate-800/80">
+        <div
+          onClick={() => navigate('/my-tickets')}
+          className="glass-card cursor-pointer rounded-2xl p-4 border border-slate-800/80 hover:border-emerald-500/50 transition-all hover:scale-[1.02]"
+        >
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Resolved Rate</span>
           <p className="mt-2 text-2xl font-extrabold text-emerald-400 font-mono">
             {(counts.resolvedTickets || 0) + (counts.closedTickets || 0)}
           </p>
-          <span className="text-[10px] text-slate-500 font-medium">Closed requests</span>
+          <span className="text-[10px] text-slate-500 font-medium">Closed requests →</span>
         </div>
 
         <div className="glass-card rounded-2xl p-4 border border-slate-800/80">
