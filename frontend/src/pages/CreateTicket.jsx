@@ -169,9 +169,12 @@ const CreateTicket = () => {
       formData.append('departmentName', departmentName || user?.departmentName || 'Information Technology');
       if (tags) formData.append('tags', tags);
 
-      files.forEach((file) => {
-        formData.append('attachments', file);
-      });
+      // Attachments are optional: only append if user selected any files
+      if (files && files.length > 0) {
+        files.forEach((file) => {
+          formData.append('attachments', file);
+        });
+      }
 
       const { data } = await ticketAPI.createTicket(formData);
 
@@ -337,8 +340,9 @@ const CreateTicket = () => {
 
           {/* File Attachments Dropzone */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-              Diagnostic Attachments (Screenshots, Logs, Error Dumps)
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2 flex items-center justify-between">
+              <span>Diagnostic Attachments & Screenshots</span>
+              <span className="text-slate-500 font-normal lowercase tracking-normal text-[11px]">(optional)</span>
             </label>
             <div className="relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700/80 bg-slate-900/60 p-8 text-center hover:border-indigo-500/60 hover:bg-slate-900/80 transition-all cursor-pointer group">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform">

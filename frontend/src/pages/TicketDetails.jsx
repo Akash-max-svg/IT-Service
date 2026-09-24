@@ -428,23 +428,54 @@ const TicketDetails = () => {
                   <span>Attachments ({ticket.attachments.length})</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {ticket.attachments.map((file, idx) => (
-                    <a
-                      key={idx}
-                      href={getFileUrl(file.filePath)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/80 p-3 text-xs text-slate-300 hover:border-indigo-500/50 hover:bg-slate-800 transition-all"
-                    >
-                      <div className="flex items-center gap-2.5 truncate">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
-                          <FileText className="h-4 w-4" />
+                  {ticket.attachments.map((file, idx) => {
+                    const isImg = file.fileType?.startsWith('image/') || /\.(jpe?g|png|gif|webp|svg)$/i.test(file.fileName || file.filePath);
+                    return isImg ? (
+                      <div key={idx} className="group relative rounded-xl border border-slate-800 bg-slate-900/80 p-3 hover:border-indigo-500/50 transition-all flex flex-col gap-2">
+                        <a
+                          href={getFileUrl(file.filePath)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block overflow-hidden rounded-lg bg-slate-950/60 aspect-video relative flex items-center justify-center border border-slate-800/60"
+                        >
+                          <img
+                            src={getFileUrl(file.filePath)}
+                            alt={file.fileName}
+                            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        </a>
+                        <div className="flex items-center justify-between text-xs text-slate-300">
+                          <span className="truncate font-medium group-hover:text-white" title={file.fileName}>{file.fileName}</span>
+                          <a
+                            href={getFileUrl(file.filePath)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-500 hover:text-indigo-400 shrink-0 ml-2"
+                            title="Open / Download"
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
                         </div>
-                        <span className="truncate font-medium group-hover:text-white">{file.fileName}</span>
                       </div>
-                      <Download className="h-4 w-4 text-slate-500 group-hover:text-indigo-400 shrink-0 ml-2" />
-                    </a>
-                  ))}
+                    ) : (
+                      <a
+                        key={idx}
+                        href={getFileUrl(file.filePath)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/80 p-3 text-xs text-slate-300 hover:border-indigo-500/50 hover:bg-slate-800 transition-all"
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <span className="truncate font-medium group-hover:text-white">{file.fileName}</span>
+                        </div>
+                        <Download className="h-4 w-4 text-slate-500 group-hover:text-indigo-400 shrink-0 ml-2" />
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}

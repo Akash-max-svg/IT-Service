@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 const attachmentSchema = new mongoose.Schema({
-  fileName: { type: String, required: true },
-  filePath: { type: String, required: true },
-  fileType: { type: String },
-  fileSize: { type: Number },
+  fileName: { type: String, required: false, default: '' },
+  filePath: { type: String, required: false, default: '' },
+  fileType: { type: String, default: '' },
+  fileSize: { type: Number, default: 0 },
   uploadedAt: { type: Date, default: Date.now },
 });
 
@@ -73,7 +73,11 @@ const ticketSchema = new mongoose.Schema(
       type: String,
       default: 'IT Support',
     },
-    attachments: [attachmentSchema],
+    attachments: {
+      type: [attachmentSchema],
+      default: [],
+      required: false,
+    },
     resolutionNotes: {
       type: String,
       default: '',
