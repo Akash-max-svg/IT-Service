@@ -4,6 +4,7 @@
   "description": "IT Service Desk & Incident Management Backend API",
   "main": "server.js",
   "scripts": {
+    "build": "node build.js",
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node utils/seeder.js"

@@ -4,10 +4,12 @@ let mongodInstance = null;
 
 const connectDB = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI;
+    const defaultAtlasUri =
+      'mongodb+srv://akashmedhara_db_user:iTakYY27xvsocwIw@cluster0.a28b0zz.mongodb.net/servicedesk?retryWrites=true&w=majority';
+    const mongoUri = process.env.MONGODB_URI || defaultAtlasUri;
 
     if (mongoUri) {
-      console.log('Connecting to provided MONGODB_URI...');
+      console.log('Connecting to MongoDB...');
       await mongoose.connect(mongoUri, {
         serverSelectionTimeoutMS: 5000,
       });

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: it-service-desk
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: JWT_SECRET
+        value: service_desk_super_secret_jwt_key_2026
+      - key: MONGODB_USERNAME
+        value: akashmedhara_db_user
+      - key: MONGODB_PASSWORD
+        value: iTakYY27xvsocwIw
+      - key: MONGODB_URI
+        value: mongodb+srv://akashmedhara_db_user:iTakYY27xvsocwIw@cluster0.a28b0zz.mongodb.net/servicedesk?retryWrites=true&w=majority
+      - key: EMAIL_FROM
+        value: '"IT Service Desk" <support@servicedesk.local>'
+      - key: SMTP_PORT
+        value: 587
