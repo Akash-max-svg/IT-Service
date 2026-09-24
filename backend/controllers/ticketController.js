@@ -6,6 +6,7 @@ const generateTicketNumber = require('../utils/generateTicketNumber');
 const { calculateDeadlines, evaluateBreachStatus } = require('../services/slaService');
 const { sendNotification, broadcastToSupport } = require('../services/notificationService');
 const { sendTicketEmail } = require('../services/emailService');
+const { normalizeRole } = require('../utils/roleUtils');
 
 // @desc    Create a new incident ticket
 // @route   POST /api/tickets
@@ -105,10 +106,12 @@ const getTickets = async (req, res) => {
 
     const query = {};
 
-    // Role-based visibility
-    if (req.user.role === 'Employee') {
+    // Role-based visibility:
+    // When an Employee queries tickets, filter strictly by their authenticated user ID from JWT!
+    const userRole = normalizeRole(req.user.role);
+    if (userRole === 'Employee') {
       query.createdBy = req.user._id;
-    } else if (req.user.role === 'Agent') {
+    } else if (userRole === 'Agent') {
       // Agents can view tickets assigned to them or open unassigned tickets
       if (req.query.assignedOnly === 'true') {
         query.assignedTo = req.user._id;
@@ -195,7 +198,7 @@ const getTicketById = async (req, res) => {
     }
 
     // Role check: Employee can only see their own ticket
-    if (req.user.role === 'Employee' && ticket.createdBy._id.toString() !== req.user._id.toString()) {
+    if (normalizeRole(req.user.role) === 'Employee' && ticket.createdBy._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Access denied to this ticket' });
     }
 
@@ -256,7 +259,7 @@ const updateTicketStatus = async (req, res) => {
     }
 
     // Role permissions for state transitions
-    if (req.user.role === 'Employee') {
+    if (normalizeRole(req.user.role) === 'Employee') {
       // Employees can only REOPEN or CLOSE
       if (!['REOPENED', 'CLOSED'].includes(status)) {
         return res.status(403).json({ message: 'Employees can only reopen or close resolved tickets' });
