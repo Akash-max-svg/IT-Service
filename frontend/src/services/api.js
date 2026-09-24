@@ -133,10 +133,7 @@ export const authAPI = {
 export const ticketAPI = {
   getTickets: (params) => api.get('/tickets', { params }),
   getTicketById: (id) => api.get(`/tickets/${id}`),
-  createTicket: (formData) =>
-    api.post('/tickets', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  createTicket: (formData) => api.post('/tickets', formData),
   updateStatus: (id, data) => api.put(`/tickets/${id}/status`, data),
   assignTicket: (id, agentId) => api.put(`/tickets/${id}/assign`, { agentId }),
   escalateTicket: (id, data) => api.put(`/tickets/${id}/escalate`, data),
@@ -145,10 +142,7 @@ export const ticketAPI = {
 
 export const commentAPI = {
   getComments: (ticketId) => api.get(`/comments/${ticketId}`),
-  addComment: (formData) =>
-    api.post('/comments', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  addComment: (formData) => api.post('/comments', formData),
 };
 
 export const notificationAPI = {

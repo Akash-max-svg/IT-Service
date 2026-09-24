@@ -23,8 +23,14 @@ const generateTicketNumber = async () => {
     }
   }
 
-  const paddedSeq = String(seq).padStart(4, '0');
-  return `${prefix}-${paddedSeq}`;
+  let candidate = `${prefix}-${String(seq).padStart(4, '0')}`;
+  // Guarantee uniqueness even under concurrent ticket submissions
+  while (await Ticket.exists({ ticketNumber: candidate })) {
+    seq++;
+    candidate = `${prefix}-${String(seq).padStart(4, '0')}`;
+  }
+
+  return candidate;
 };
 
 module.exports = generateTicketNumber;

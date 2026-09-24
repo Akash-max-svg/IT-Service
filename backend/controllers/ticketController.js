@@ -71,8 +71,8 @@ const createTicket = async (req, res) => {
       createdAt: ticket.createdAt,
     });
 
-    // Send confirmation email
-    await sendTicketEmail({
+    // Send confirmation email asynchronously without blocking the response
+    sendTicketEmail({
       to: req.user.email,
       subject: `[${ticket.ticketNumber}] Ticket Received: ${ticket.title}`,
       html: `
@@ -83,7 +83,7 @@ const createTicket = async (req, res) => {
         <p><strong>Priority:</strong> ${ticket.priority}</p>
         <p>Our support team has been notified and will review your ticket within the SLA response window.</p>
       `,
-    });
+    }).catch((emailErr) => console.error('Ticket email dispatch error (non-fatal):', emailErr.message));
 
     const populatedTicket = await Ticket.findById(ticket._id)
       .populate('createdBy', 'name email departmentName avatar')

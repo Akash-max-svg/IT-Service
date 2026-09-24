@@ -94,6 +94,7 @@ const CreateTicket = () => {
   const [tags, setTags] = useState('');
 
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -150,6 +151,7 @@ const CreateTicket = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
 
     if (!title.trim() || !description.trim()) {
       setError('Please provide an incident summary title and detailed explanation.');
@@ -159,12 +161,12 @@ const CreateTicket = () => {
     setSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('title', title);
-      formData.append('description', description);
+      formData.append('title', title.trim());
+      formData.append('description', description.trim());
       formData.append('category', category);
-      formData.append('subcategory', subcategory);
+      formData.append('subcategory', subcategory || '');
       formData.append('priority', priority);
-      formData.append('departmentName', departmentName);
+      formData.append('departmentName', departmentName || user?.departmentName || 'Information Technology');
       if (tags) formData.append('tags', tags);
 
       files.forEach((file) => {
@@ -172,9 +174,19 @@ const CreateTicket = () => {
       });
 
       const { data } = await ticketAPI.createTicket(formData);
-      navigate(`/tickets/${data._id}`);
+
+      setSuccessMsg(`Incident Ticket #${data.ticketNumber} submitted successfully! Redirecting to My Tickets...`);
+      setTimeout(() => {
+        navigate('/my-tickets', {
+          state: {
+            newTicketId: data._id,
+            successMessage: `Incident Ticket #${data.ticketNumber} ("${data.title}") was submitted and logged in MongoDB successfully!`,
+          },
+        });
+      }, 1200);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit incident ticket. Please try again.');
+      console.error('Ticket submission error:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to submit incident ticket. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -208,9 +220,16 @@ const CreateTicket = () => {
         </div>
 
         {error && (
-          <div className="flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300 shadow-md">
+          <div className="flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300 shadow-md animate-in fade-in">
             <AlertCircle className="h-5 w-5 shrink-0 text-rose-400" />
             <span className="font-medium">{error}</span>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300 shadow-md animate-in fade-in">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+            <span className="font-semibold">{successMsg}</span>
           </div>
         )}
 

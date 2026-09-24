@@ -13,11 +13,19 @@ const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 
-router.use(protect);
+// Safe multer wrapper to intercept upload errors gracefully
+const handleUpload = (req, res, next) => {
+  upload.array('attachments', 5)(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message || 'File attachment upload failed' });
+    }
+    next();
+  });
+};
 
 router
   .route('/')
-  .post(upload.array('attachments', 5), createTicket)
+  .post(handleUpload, createTicket)
   .get(getTickets);
 
 router.route('/:id').get(getTicketById);

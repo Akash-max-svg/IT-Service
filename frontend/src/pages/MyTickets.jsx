@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ticketAPI } from '../services/api';
 import useAuth from '../hooks/useAuth';
 import TicketTable from '../components/TicketTable';
@@ -12,15 +12,19 @@ import {
   List,
   AlertTriangle,
   RotateCcw,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 
 const MyTickets = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
+  const [successBanner, setSuccessBanner] = useState('');
 
   // Filters
   const [search, setSearch] = useState('');
@@ -33,6 +37,14 @@ const MyTickets = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessBanner(location.state.successMessage);
+      // Clean location state so it doesn't persist across manual page reloads
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const fetchTickets = async () => {
     try {
@@ -133,6 +145,23 @@ const MyTickets = () => {
           </button>
         </div>
       </div>
+
+      {/* Top success alert banner */}
+      {successBanner && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300 shadow-xl animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+            <span className="font-semibold text-sm">{successBanner}</span>
+          </div>
+          <button
+            onClick={() => setSuccessBanner('')}
+            className="text-emerald-400 hover:text-emerald-200 transition-colors p-1 rounded-lg hover:bg-emerald-500/20"
+            title="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 space-y-4">
