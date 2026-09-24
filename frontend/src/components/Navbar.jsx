@@ -50,6 +50,11 @@ const Navbar = ({ onToggleSidebar }) => {
       fetchNotifications();
 
       const socket = getSocket();
+      socket.emit('join_user', user._id);
+      if (['Agent', 'Admin'].includes(normalizeRole(user.role))) {
+        socket.emit('join_support');
+      }
+
       const handleNewNotification = (notif) => {
         setNotifications((prev) => [notif, ...prev]);
         setUnreadCount((c) => c + 1);

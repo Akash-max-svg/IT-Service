@@ -13,6 +13,9 @@ const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 
+// Protect all ticket routes with JWT authentication
+router.use(protect);
+
 // Safe multer wrapper to intercept upload errors gracefully
 const handleUpload = (req, res, next) => {
   upload.array('attachments', 5)(req, res, (err) => {
