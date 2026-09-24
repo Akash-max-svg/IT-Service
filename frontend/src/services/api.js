@@ -1,20 +1,73 @@
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
-export const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  (typeof window !== 'undefined'
-    ? (window.location.port === '3000'
-        ? `${window.location.protocol}//${window.location.hostname}:5000`
-        : window.location.origin)
-    : 'http://localhost:5000');
+const PRODUCTION_RENDER_BACKEND = 'https://it-service-1-5ehd.onrender.com';
+
+export const resolveApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // Local development (Vite dev server)
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return '/api';
+    }
+    // Deployed on Vercel
+    if (hostname.includes('vercel.app')) {
+      return `${PRODUCTION_RENDER_BACKEND}/api`;
+    }
+    // Deployed on Render full-stack
+    if (hostname.includes('onrender.com')) {
+      return '/api';
+    }
+  }
+  return '/api';
+};
+
+export const resolveSocketUrl = () => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `${window.location.protocol}//${hostname}:5000`;
+    }
+    if (hostname.includes('vercel.app')) {
+      return PRODUCTION_RENDER_BACKEND;
+    }
+    return window.location.origin;
+  }
+  return 'http://localhost:5000';
+};
+
+export const getFileUrl = (filePath) => {
+  if (!filePath) return '';
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+  const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname.includes('vercel.app')) {
+      return `${PRODUCTION_RENDER_BACKEND}${cleanPath}`;
+    }
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `http://localhost:5000${cleanPath}`;
+    }
+  }
+  return cleanPath;
+};
+
+export const SOCKET_URL = resolveSocketUrl();
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: resolveApiBaseUrl(),
+  withCredentials: true,
 });
 
-// Attach JWT token from localStorage to every request
+// Attach JWT token from localStorage to every outgoing request
 api.interceptors.request.use(
   (config) => {
     const userStr = localStorage.getItem('user');
@@ -38,8 +91,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Token expired or invalid
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+      const path = window.location.pathname;
+      const isAuthEndpoint =
+        error.config?.url?.includes('/auth/login') ||
+        error.config?.url?.includes('/auth/register') ||
+        error.config?.url?.includes('/auth/verify-email');
+
+      // Only redirect if outside authentication screens and not failing a direct login attempt
+      if (path !== '/login' && path !== '/register' && !isAuthEndpoint) {
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
@@ -55,6 +114,7 @@ export const getSocket = () => {
     socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
+      withCredentials: true,
     });
   }
   return socket;

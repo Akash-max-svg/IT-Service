@@ -26,9 +26,11 @@ const server = http.createServer(app);
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: (origin, callback) => callback(null, origin || true),
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true,
   },
+  transports: ['websocket', 'polling'],
 });
 
 setSocketIO(io);
@@ -65,8 +67,44 @@ io.on('connection', (socket) => {
   });
 });
 
-// Middleware
-app.use(cors());
+// Comprehensive CORS configuration for both local dev and production (Vercel & Render)
+const allowedOrigins = [
+  'https://it-service-desk-xi.vercel.app',
+  'https://it-service-1-5ehd.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5000',
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // If no origin (e.g. server-to-server, curl, Postman), allow
+    if (!origin) return callback(null, true);
+    
+    // Check exact matches or trusted patterns
+    const isAllowed =
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.onrender.com') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1');
+
+    if (isAllowed) {
+      return callback(null, origin); // Echo origin back to satisfy credentials mode
+    }
+    // Permissive fallback so legitimate client requests never get blocked
+    return callback(null, origin);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

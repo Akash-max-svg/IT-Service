@@ -14,24 +14,39 @@ export const AuthProvider = ({ children }) => {
         try {
           const parsed = JSON.parse(stored);
           if (parsed && parsed.token) {
-            // Validate token against backend
+            // Optimistically restore session so UI is immediately usable
+            setUser(parsed);
+
+            // Connect socket with existing token
+            try {
+              const socket = getSocket();
+              if (socket && !socket.connected) {
+                socket.connect();
+              }
+              socket.emit('join_user', parsed._id);
+              if (['Agent', 'Admin'].includes(parsed.role)) {
+                socket.emit('join_support');
+              }
+            } catch (sockErr) {
+              console.warn('Socket connection deferred:', sockErr.message);
+            }
+
+            // Verify and refresh profile in background
             try {
               const { data: verifiedUser } = await authAPI.getMe();
               const fullUserData = { ...parsed, ...verifiedUser, token: parsed.token };
               setUser(fullUserData);
               localStorage.setItem('user', JSON.stringify(fullUserData));
-
-              // Register with real-time socket
-              const socket = getSocket();
-              socket.emit('join_user', fullUserData._id);
-              if (['Agent', 'Admin'].includes(fullUserData.role)) {
-                socket.emit('join_support');
-              }
             } catch (err) {
-              // Token invalid or user no longer exists in DB (e.g. after DB switch to Atlas)
-              console.warn('Session expired or invalidated. Clearing session.', err.message);
-              localStorage.removeItem('user');
-              setUser(null);
+              // ONLY clear session if server actively rejected token as 401 Unauthorized
+              if (err.response && err.response.status === 401) {
+                console.warn('JWT session expired or invalid. Logging out.');
+                localStorage.removeItem('user');
+                setUser(null);
+              } else {
+                // Network error, backend cold start / waking up
+                console.warn('Backend server waking up or network unavailable; keeping active session:', err.message);
+              }
             }
           } else {
             localStorage.removeItem('user');
@@ -55,10 +70,17 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(data));
 
     // Connect socket
-    const socket = getSocket();
-    socket.emit('join_user', data._id);
-    if (['Agent', 'Admin'].includes(data.role)) {
-      socket.emit('join_support');
+    try {
+      const socket = getSocket();
+      if (socket && !socket.connected) {
+        socket.connect();
+      }
+      socket.emit('join_user', data._id);
+      if (['Agent', 'Admin'].includes(data.role)) {
+        socket.emit('join_support');
+      }
+    } catch (e) {
+      console.warn('Socket connection deferred on login:', e.message);
     }
 
     return data;
@@ -75,10 +97,17 @@ export const AuthProvider = ({ children }) => {
       setUser(data);
       localStorage.setItem('user', JSON.stringify(data));
 
-      const socket = getSocket();
-      socket.emit('join_user', data._id);
-      if (['Agent', 'Admin'].includes(data.role)) {
-        socket.emit('join_support');
+      try {
+        const socket = getSocket();
+        if (socket && !socket.connected) {
+          socket.connect();
+        }
+        socket.emit('join_user', data._id);
+        if (['Agent', 'Admin'].includes(data.role)) {
+          socket.emit('join_support');
+        }
+      } catch (e) {
+        console.warn('Socket connection deferred on verify:', e.message);
       }
     }
     return data;
@@ -92,6 +121,14 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    try {
+      const socket = getSocket();
+      if (socket) {
+        socket.disconnect();
+      }
+    } catch (e) {
+      // ignore
+    }
     window.location.href = '/login';
   };
 
@@ -122,3 +159,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;

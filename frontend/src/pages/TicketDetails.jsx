@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
-import { ticketAPI, commentAPI, userAPI, getSocket } from '../services/api';
+import { ticketAPI, commentAPI, userAPI, getSocket, getFileUrl } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
 import SLAIndicator from '../components/SLAIndicator';
@@ -431,7 +431,7 @@ const TicketDetails = () => {
                   {ticket.attachments.map((file, idx) => (
                     <a
                       key={idx}
-                      href={`http://localhost:5000${file.filePath}`}
+                      href={getFileUrl(file.filePath)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/80 p-3 text-xs text-slate-300 hover:border-indigo-500/50 hover:bg-slate-800 transition-all"
@@ -537,7 +537,7 @@ const TicketDetails = () => {
                                 {c.attachments.map((f, i) => (
                                   <a
                                     key={i}
-                                    href={`http://localhost:5000${f.filePath}`}
+                                    href={getFileUrl(f.filePath)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] text-indigo-400 hover:text-white"
