@@ -26,7 +26,9 @@ import {
   Paperclip,
   CheckCircle,
   X,
+  Download,
 } from 'lucide-react';
+import { downloadTicketPDF, downloadTicketsListPDF } from '../utils/pdfGenerator';
 
 const AgentDashboard = () => {
   const { user } = useAuth();
@@ -121,6 +123,17 @@ const AgentDashboard = () => {
 
   const handleClaim = async (ticketId) => {
     try {
+      setTickets((prev) =>
+        prev.map((t) =>
+          t._id === ticketId
+            ? {
+                ...t,
+                assignedTo: user,
+                status: t.status === 'OPEN' ? 'ASSIGNED' : t.status,
+              }
+            : t
+        )
+      );
       await ticketAPI.assignTicket(ticketId, user._id);
       setToastMessage({ type: 'success', text: 'Ticket successfully claimed and assigned to your queue!' });
       setTimeout(() => setToastMessage(null), 4000);
@@ -128,11 +141,22 @@ const AgentDashboard = () => {
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.message || 'Failed to claim ticket' });
       setTimeout(() => setToastMessage(null), 4000);
+      fetchTickets();
     }
   };
 
   const handleStartWork = async (ticketId) => {
     try {
+      setTickets((prev) =>
+        prev.map((t) =>
+          t._id === ticketId
+            ? {
+                ...t,
+                status: 'IN PROGRESS',
+              }
+            : t
+        )
+      );
       await ticketAPI.updateStatus(ticketId, { status: 'IN PROGRESS' });
       setToastMessage({ type: 'success', text: 'Status changed to IN PROGRESS. Work started!' });
       setTimeout(() => setToastMessage(null), 4000);
@@ -140,6 +164,7 @@ const AgentDashboard = () => {
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.message || 'Failed to start diagnostic' });
       setTimeout(() => setToastMessage(null), 4000);
+      fetchTickets();
     }
   };
 
@@ -153,6 +178,19 @@ const AgentDashboard = () => {
 
     try {
       setIsSubmittingResolution(true);
+      // Immediately update local state across the project
+      setTickets((prev) =>
+        prev.map((t) =>
+          t._id === resolvingTicket._id
+            ? {
+                ...t,
+                status: 'RESOLVED',
+                resolutionNotes: resolutionNotes.trim(),
+                resolvedAt: new Date().toISOString(),
+              }
+            : t
+        )
+      );
       await ticketAPI.updateStatus(resolvingTicket._id, {
         status: 'RESOLVED',
         resolutionNotes: resolutionNotes.trim(),
@@ -171,6 +209,7 @@ const AgentDashboard = () => {
         text: err.response?.data?.message || 'Failed to mark ticket as resolved',
       });
       setTimeout(() => setToastMessage(null), 4000);
+      fetchTickets();
     } finally {
       setIsSubmittingResolution(false);
     }
@@ -368,9 +407,20 @@ const AgentDashboard = () => {
             </button>
           </div>
 
-          <span className="text-xs text-slate-500 font-mono">
-            Showing <strong className="text-slate-800">{filteredTickets.length}</strong> incident(s)
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => downloadTicketsListPDF(filteredTickets, `Agent Queue - ${activeQueueTab.toUpperCase()}`)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold px-3 py-2 text-xs transition-colors shadow-sm"
+              title="Download entire queue in PDF format"
+            >
+              <Download className="h-3.5 w-3.5 text-amber-600" />
+              <span>Export Queue (PDF)</span>
+            </button>
+            <span className="text-xs text-slate-500 font-mono">
+              Showing <strong className="text-slate-950 font-bold">{filteredTickets.length}</strong> incident(s)
+            </span>
+          </div>
         </div>
 
         {/* Detailed Incident Cards with Direct Problem Solving Actions */}
@@ -426,7 +476,7 @@ const AgentDashboard = () => {
 
                     <h3
                       onClick={() => navigate(`/tickets/${ticket._id}`)}
-                      className="text-base font-bold text-slate-900 hover:text-amber-600 cursor-pointer transition-colors"
+                      className="text-base font-bold text-slate-950 hover:text-amber-600 cursor-pointer transition-colors"
                     >
                       {ticket.title}
                     </h3>
@@ -441,7 +491,7 @@ const AgentDashboard = () => {
                         <div className="h-5 w-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-[10px]">
                           {employeeName.charAt(0)}
                         </div>
-                        <span>Reported by: <strong>{employeeName}</strong> ({department})</span>
+                        <span>Reported by: <strong className="text-slate-950 font-black">{employeeName}</strong> ({department})</span>
                       </div>
 
                       <div className="flex items-center gap-1 font-mono">
@@ -462,6 +512,16 @@ const AgentDashboard = () => {
 
                   {/* Right: Problem Solving Actions */}
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
+                    {/* Download PDF Button */}
+                    <button
+                      type="button"
+                      onClick={() => downloadTicketPDF(ticket)}
+                      className="p-2 rounded-xl border border-slate-300 hover:border-amber-400 bg-white text-slate-700 hover:text-amber-800 hover:bg-amber-50 transition-all shadow-sm"
+                      title="Download Problem Report (PDF)"
+                    >
+                      <Download className="h-4 w-4 text-amber-600" />
+                    </button>
+
                     {/* View Problem Button */}
                     <button
                       type="button"

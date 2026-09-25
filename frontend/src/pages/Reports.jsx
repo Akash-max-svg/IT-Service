@@ -103,48 +103,50 @@ const Reports = () => {
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-black text-slate-950 tracking-tight">
             IT Service Desk Reports & SLA Metrics
           </h1>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-600">
             Resolution velocity, agent productivity, SLA compliance tracking, and audit trails.
           </p>
         </div>
 
         <button
           onClick={exportCSV}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+          className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold px-4 py-2.5 text-xs transition-colors shadow-sm"
         >
-          <Download className="h-4 w-4" /> Export CSV Report
+          <Download className="h-4 w-4 text-amber-600" /> Export CSV Report
         </button>
       </div>
 
       {/* Monthly Incident Volume Trend */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-white">Monthly Incident Trend & Resolution Velocity</h3>
-            <p className="text-xs text-slate-400">Incoming incident volume vs. successfully resolved tickets</p>
+            <h3 className="text-sm font-bold text-slate-950">Monthly Incident Trend & Resolution Velocity</h3>
+            <p className="text-xs text-slate-500">Incoming incident volume vs. successfully resolved tickets</p>
           </div>
-          <span className="text-xs text-indigo-400 font-mono">Last 6 Months</span>
+          <span className="text-xs text-amber-800 font-mono font-bold bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-lg">Last 6 Months</span>
         </div>
 
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trendData.length > 0 ? trendData : [{ period: 'Current', Created: 5, Resolved: 2 }]}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="period" stroke="#64748b" fontSize={11} />
               <YAxis stroke="#64748b" fontSize={11} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f172a',
-                  borderColor: '#334155',
-                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  borderColor: '#cbd5e1',
+                  borderRadius: '12px',
                   fontSize: '12px',
+                  color: '#0f172a',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
                 }}
               />
-              <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
-              <Line type="monotone" dataKey="Created" stroke="#6366f1" strokeWidth={2.5} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: '#475569' }} />
+              <Line type="monotone" dataKey="Created" stroke="#f59e0b" strokeWidth={2.5} />
               <Line type="monotone" dataKey="Resolved" stroke="#10b981" strokeWidth={2.5} />
             </LineChart>
           </ResponsiveContainer>
@@ -152,42 +154,42 @@ const Reports = () => {
       </div>
 
       {/* Support Agent Performance Leaderboard */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/80 shadow-lg p-5">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-md p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-white">Support Specialist Productivity & CSAT</h3>
-            <p className="text-xs text-slate-400">Total assigned, completed incidents, and average satisfaction score</p>
+            <h3 className="text-sm font-bold text-slate-950">Support Specialist Productivity & CSAT</h3>
+            <p className="text-xs text-slate-500">Total assigned, completed incidents, and average satisfaction score</p>
           </div>
-          <Award className="h-5 w-5 text-amber-400" />
+          <Award className="h-5 w-5 text-amber-500" />
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-800/60 uppercase tracking-wider text-slate-400 border-b border-slate-700/60">
+          <table className="w-full text-left text-xs text-slate-700">
+            <thead className="bg-amber-50/70 uppercase tracking-wider text-slate-700 border-b border-amber-200/80 font-mono text-[11px]">
               <tr>
-                <th className="px-5 py-3">Specialist</th>
-                <th className="px-4 py-3">Specialization</th>
-                <th className="px-4 py-3 text-center">Assigned</th>
-                <th className="px-4 py-3 text-center">Resolved</th>
-                <th className="px-4 py-3 text-center">Resolution Rate</th>
-                <th className="px-4 py-3 text-right">Avg CSAT</th>
+                <th className="px-5 py-4 font-bold text-slate-800">Specialist</th>
+                <th className="px-4 py-4 font-bold text-slate-800">Specialization</th>
+                <th className="px-4 py-4 text-center font-bold text-slate-800">Assigned</th>
+                <th className="px-4 py-4 text-center font-bold text-slate-800">Resolved</th>
+                <th className="px-4 py-4 text-center font-bold text-slate-800">Resolution Rate</th>
+                <th className="px-4 py-4 text-right font-bold text-slate-800">Avg CSAT</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/50">
+            <tbody className="divide-y divide-slate-100">
               {(reportsData?.agentPerformance || []).map((ag) => {
                 const rate = ag.assignedCount > 0 ? Math.round((ag.resolvedCount / ag.assignedCount) * 100) : 100;
                 return (
-                  <tr key={ag.agentId} className="hover:bg-slate-800/40">
-                    <td className="px-5 py-3.5 font-semibold text-white">{ag.name}</td>
-                    <td className="px-4 py-3.5 text-slate-400">{ag.specialization || 'IT Support'}</td>
-                    <td className="px-4 py-3.5 text-center font-mono">{ag.assignedCount}</td>
-                    <td className="px-4 py-3.5 text-center font-mono text-emerald-400">{ag.resolvedCount}</td>
+                  <tr key={ag.agentId} className="hover:bg-amber-50/30 transition-colors">
+                    <td className="px-5 py-3.5 font-black text-slate-950">{ag.name}</td>
+                    <td className="px-4 py-3.5 text-slate-600 font-medium">{ag.specialization || 'IT Support'}</td>
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-900">{ag.assignedCount}</td>
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-emerald-600">{ag.resolvedCount}</td>
                     <td className="px-4 py-3.5 text-center">
-                      <span className="inline-flex rounded-full bg-indigo-500/10 px-2 py-0.5 font-mono text-indigo-400 font-semibold">
+                      <span className="inline-flex rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 font-mono text-amber-900 font-bold">
                         {rate}%
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono font-bold text-amber-400">
+                    <td className="px-4 py-3.5 text-right font-mono font-bold text-amber-600">
                       {ag.avgRating !== 'N/A' ? `${ag.avgRating} ★` : '—'}
                     </td>
                   </tr>
@@ -199,13 +201,13 @@ const Reports = () => {
       </div>
 
       {/* System Audit Trail */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/80 shadow-lg p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 pb-3 border-b border-slate-800">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-md p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
           <div>
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <History className="h-4 w-4 text-indigo-400" /> System Audit Trail & Compliance Log
+            <h3 className="text-sm font-bold text-slate-950 flex items-center gap-2">
+              <History className="h-4 w-4 text-amber-600" /> System Audit Trail & Compliance Log
             </h3>
-            <p className="text-xs text-slate-400">Tamper-evident log of status updates, escalations, and reassignments</p>
+            <p className="text-xs text-slate-500">Tamper-evident log of status updates, escalations, and reassignments</p>
           </div>
 
           {/* Action Filter */}
@@ -214,10 +216,10 @@ const Reports = () => {
               <button
                 key={act}
                 onClick={() => handleActionFilterChange(act)}
-                className={`rounded-lg px-2.5 py-1 whitespace-nowrap transition-colors ${
+                className={`rounded-xl px-2.5 py-1 whitespace-nowrap transition-colors ${
                   actionFilter === act
-                    ? 'bg-indigo-600 text-white font-semibold'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 {act}
@@ -227,32 +229,32 @@ const Reports = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-800/60 uppercase tracking-wider text-slate-400 border-b border-slate-700/60">
+          <table className="w-full text-left text-xs text-slate-700">
+            <thead className="bg-amber-50/70 uppercase tracking-wider text-slate-700 border-b border-amber-200/80 font-mono text-[11px]">
               <tr>
-                <th className="px-4 py-3">Timestamp</th>
-                <th className="px-4 py-3">User</th>
-                <th className="px-4 py-3">Action</th>
-                <th className="px-4 py-3">Ticket</th>
-                <th className="px-5 py-3">Details / Notes</th>
+                <th className="px-4 py-3 font-bold text-slate-800">Timestamp</th>
+                <th className="px-4 py-3 font-bold text-slate-800">User</th>
+                <th className="px-4 py-3 font-bold text-slate-800">Action</th>
+                <th className="px-4 py-3 font-bold text-slate-800">Ticket</th>
+                <th className="px-5 py-3 font-bold text-slate-800">Details / Notes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/50 font-mono">
+            <tbody className="divide-y divide-slate-100 font-mono">
               {auditLogs.map((log) => (
-                <tr key={log._id} className="hover:bg-slate-800/40">
-                  <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
+                <tr key={log._id} className="hover:bg-amber-50/30 transition-colors">
+                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 font-sans font-medium text-white whitespace-nowrap">
+                  <td className="px-4 py-3 font-sans font-black text-slate-950 whitespace-nowrap">
                     {log.performedBy?.name || 'System'} ({log.performedBy?.role})
                   </td>
-                  <td className="px-4 py-3 text-indigo-400 whitespace-nowrap font-bold">
+                  <td className="px-4 py-3 text-amber-800 whitespace-nowrap font-bold">
                     {log.action}
                   </td>
-                  <td className="px-4 py-3 text-slate-300 whitespace-nowrap">
+                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                     {log.ticket?.ticketNumber || '—'}
                   </td>
-                  <td className="px-5 py-3 font-sans text-slate-300 max-w-sm truncate">
+                  <td className="px-5 py-3 font-sans text-slate-700 max-w-sm truncate font-medium">
                     {log.notes || '—'}
                   </td>
                 </tr>

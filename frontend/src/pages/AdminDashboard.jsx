@@ -46,7 +46,9 @@ import {
   Building,
   Briefcase,
   ExternalLink,
+  Download,
 } from 'lucide-react';
+import { downloadTicketPDF, downloadTicketsListPDF } from '../utils/pdfGenerator';
 
 const COLORS = ['#f59e0b', '#d97706', '#10b981', '#6366f1', '#ef4444', '#8b5cf6', '#ec4899'];
 const PRIORITY_COLORS = {
@@ -475,6 +477,17 @@ const AdminDashboard = () => {
                 <option value="LOW">Low</option>
               </select>
             </div>
+
+            {/* PDF Export Button */}
+            <button
+              type="button"
+              onClick={() => downloadTicketsListPDF(filteredTickets, 'Admin Incident Register')}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold px-3 py-2 text-xs transition-colors shadow-sm"
+              title="Download all filtered problem tickets in PDF format"
+            >
+              <Download className="h-3.5 w-3.5 text-amber-600" />
+              <span>Export PDF</span>
+            </button>
           </div>
         </div>
 
@@ -567,13 +580,13 @@ const AdminDashboard = () => {
                             {employeeName.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-semibold text-slate-900 truncate max-w-[130px]" title={employeeName}>
+                            <div className="font-black text-slate-950 text-xs truncate max-w-[130px]" title={employeeName}>
                               {employeeName}
                             </div>
-                            <div className="text-[11px] text-slate-500 truncate max-w-[130px]" title={employeeEmail}>
+                            <div className="text-[11px] text-slate-600 font-medium truncate max-w-[130px]" title={employeeEmail}>
                               {employeeEmail}
                             </div>
-                            <div className="inline-flex items-center gap-1 mt-0.5 text-[10px] text-slate-500 font-medium">
+                            <div className="inline-flex items-center gap-1 mt-0.5 text-[10px] text-slate-600 font-semibold">
                               <Building className="h-2.5 w-2.5 text-amber-600" />
                               <span className="truncate max-w-[110px]">{department}</span>
                             </div>
@@ -585,7 +598,7 @@ const AdminDashboard = () => {
                       <td className="px-4 py-4 align-top max-w-xs md:max-w-sm">
                         <div
                           onClick={() => navigate(`/tickets/${ticket._id}`)}
-                          className="font-semibold text-slate-900 hover:text-amber-600 cursor-pointer transition-colors leading-snug line-clamp-1"
+                          className="font-bold text-slate-950 hover:text-amber-600 cursor-pointer transition-colors leading-snug line-clamp-1"
                           title={ticket.title}
                         >
                           {ticket.title}
@@ -686,10 +699,10 @@ const AdminDashboard = () => {
 
                           {/* Current Assignee Indicator */}
                           {ticket.assignedTo ? (
-                            <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-semibold">
+                            <div className="flex items-center gap-1.5 text-[11px] text-emerald-800 font-semibold">
                               <UserCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                               <span className="truncate max-w-[160px]">
-                                Assigned to: {ticket.assignedTo.name}
+                                Assigned to: <strong className="text-slate-950 font-black">{ticket.assignedTo.name}</strong>
                               </span>
                             </div>
                           ) : (
@@ -703,14 +716,24 @@ const AdminDashboard = () => {
 
                       {/* Action Button */}
                       <td className="px-4 py-4 align-top text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/tickets/${ticket._id}`)}
-                          className="inline-flex items-center gap-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 text-xs transition-all shadow-sm"
-                        >
-                          <span>Details</span>
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => downloadTicketPDF(ticket)}
+                            className="p-1.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-white text-slate-700 hover:text-amber-800 hover:bg-amber-50 transition-all shadow-sm"
+                            title="Download Ticket Problem Report (PDF)"
+                          >
+                            <Download className="h-3.5 w-3.5 text-amber-600" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/tickets/${ticket._id}`)}
+                            className="inline-flex items-center gap-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 text-xs transition-all shadow-sm"
+                          >
+                            <span>Details</span>
+                            <ArrowUpRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

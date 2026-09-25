@@ -33,6 +33,7 @@ import {
   HelpCircle,
   UserCheck,
 } from 'lucide-react';
+import { downloadTicketPDF } from '../utils/pdfGenerator';
 
 const LIFECYCLE_STEPS = ['OPEN', 'ASSIGNED', 'IN PROGRESS', 'RESOLVED', 'CLOSED'];
 
@@ -154,16 +155,32 @@ const TicketDetails = () => {
   };
 
   const handleStatusChange = async (newStatus, customResolutionNotes = '') => {
+    const resNotes = customResolutionNotes || resolutionNotes;
+    // Immediately update local state in project so UI reacts without page reload
+    setTicket((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: newStatus,
+            resolutionNotes: resNotes || prev.resolutionNotes,
+            resolvedAt: newStatus === 'RESOLVED' ? new Date().toISOString() : prev.resolvedAt,
+            closedAt: newStatus === 'CLOSED' ? new Date().toISOString() : prev.closedAt,
+          }
+        : prev
+    );
     try {
       const { data: updated } = await ticketAPI.updateStatus(id, {
         status: newStatus,
-        resolutionNotes: customResolutionNotes || resolutionNotes,
+        resolutionNotes: resNotes,
       });
-      setTicket(updated);
+      if (updated) {
+        setTicket(updated);
+      }
       setShowResolveModal(false);
       fetchTicketData();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update status');
+      fetchTicketData();
     }
   };
 
@@ -283,7 +300,7 @@ const TicketDetails = () => {
         <div className="flex items-start gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="mt-1 rounded-xl p-2.5 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800 transition-colors"
+            className="mt-1 rounded-xl p-2.5 text-slate-700 hover:bg-amber-50 hover:text-slate-950 border border-slate-300 bg-white shadow-sm transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -291,14 +308,14 @@ const TicketDetails = () => {
             <div className="flex flex-wrap items-center gap-2.5">
               <button
                 onClick={copyTicketNumber}
-                className="group inline-flex items-center gap-1.5 rounded-lg bg-indigo-500/10 px-2.5 py-1 font-mono text-xs font-bold text-indigo-400 border border-indigo-500/25 hover:bg-indigo-500/20 transition-colors"
+                className="group inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 font-mono text-xs font-bold text-amber-700 border border-amber-300 hover:bg-amber-100 transition-colors"
                 title="Click to copy ticket tracking code"
               >
                 <span>{ticket.ticketNumber}</span>
                 {copied ? (
-                  <Check className="h-3 w-3 text-emerald-400" />
+                  <Check className="h-3 w-3 text-emerald-600" />
                 ) : (
-                  <Copy className="h-3 w-3 text-indigo-400/60 group-hover:text-indigo-300" />
+                  <Copy className="h-3 w-3 text-amber-600 group-hover:text-amber-800" />
                 )}
               </button>
 
@@ -307,7 +324,7 @@ const TicketDetails = () => {
               <SLAIndicator ticket={ticket} />
             </div>
 
-            <h1 className="mt-2 text-xl font-extrabold text-white sm:text-2xl tracking-tight">
+            <h1 className="mt-2 text-xl font-black text-slate-950 sm:text-2xl tracking-tight">
               {ticket.title}
             </h1>
           </div>
@@ -315,6 +332,16 @@ const TicketDetails = () => {
 
         {/* Action Controls for Staff & Creator */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Universal PDF Download Button for Admin, Agent, and Employee */}
+          <button
+            type="button"
+            onClick={() => downloadTicketPDF(ticket)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold px-3.5 py-2 text-xs transition-colors shadow-sm"
+            title="Download Official Incident Report (PDF)"
+          >
+            <Download className="h-4 w-4 text-amber-600" />
+            <span>Download PDF</span>
+          </button>
           {/* Admin Direct Agent Assignment */}
           {isAdmin && (
             <div className="flex items-center gap-2 rounded-xl bg-slate-900 border border-indigo-500/40 px-3 py-1.5 shadow-sm">
@@ -611,12 +638,12 @@ const TicketDetails = () => {
             </div>
           )}
           {/* Incident Description Card */}
-          <div className="glass-panel rounded-3xl p-6 border border-slate-800/80 shadow-xl space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="rounded-3xl p-6 border border-slate-200 bg-white shadow-md space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Problem Description & Logs
             </h3>
-            <div className="rounded-2xl bg-slate-900/60 p-4 border border-slate-800">
-              <p className="text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
+            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+              <p className="text-xs sm:text-sm text-slate-900 font-medium whitespace-pre-wrap leading-relaxed">
                 {ticket.description}
               </p>
             </div>
@@ -700,14 +727,15 @@ const TicketDetails = () => {
           </div>
 
           {/* Conversation & Audit Tabs */}
-          <div className="glass-panel rounded-3xl border border-slate-800/80 shadow-2xl overflow-hidden">
-            <div className="flex border-b border-slate-800/80 px-6 pt-4 gap-6">
+          {/* Conversation & Audit Tabs */}
+          <div className="rounded-3xl border border-slate-200 bg-white shadow-md overflow-hidden">
+            <div className="flex border-b border-slate-200 px-6 pt-4 gap-6 bg-slate-50/60">
               <button
                 onClick={() => setActiveTab('discussion')}
                 className={`pb-3.5 text-xs font-bold flex items-center gap-2 transition-all border-b-2 ${
                   activeTab === 'discussion'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                    ? 'border-amber-500 text-amber-950'
+                    : 'border-transparent text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <MessageSquare className="h-4 w-4" />
@@ -717,8 +745,8 @@ const TicketDetails = () => {
                 onClick={() => setActiveTab('audit')}
                 className={`pb-3.5 text-xs font-bold flex items-center gap-2 transition-all border-b-2 ${
                   activeTab === 'audit'
-                    ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                    ? 'border-amber-500 text-amber-950'
+                    : 'border-transparent text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <History className="h-4 w-4" />
@@ -745,23 +773,23 @@ const TicketDetails = () => {
                             key={c._id}
                             className={`rounded-2xl p-4 transition-all duration-200 ${
                               isInternal
-                                ? 'border border-amber-500/40 bg-amber-950/20 shadow-md shadow-amber-950/30'
+                                ? 'border border-amber-300 bg-amber-50/70 shadow-sm'
                                 : isSender
-                                ? 'border border-indigo-500/30 bg-indigo-950/25 ml-4 sm:ml-8'
-                                : 'border border-slate-800 bg-slate-900/60 mr-4 sm:mr-8'
+                                ? 'border border-amber-200 bg-amber-50/30 ml-4 sm:ml-8'
+                                : 'border border-slate-200 bg-slate-50 mr-4 sm:mr-8'
                             }`}
                           >
-                            <div className="flex items-center justify-between text-xs pb-2 border-b border-white/5">
+                            <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200/60">
                               <div className="flex items-center gap-2.5">
-                                <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-[11px] font-bold text-white flex items-center justify-center shadow-sm">
+                                <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 text-[11px] font-black text-slate-950 flex items-center justify-center shadow-sm">
                                   {c.user?.name?.charAt(0) || 'U'}
                                 </div>
-                                <span className="font-bold text-slate-200">{c.user?.name}</span>
-                                <span className="text-[10px] text-slate-400 font-mono">
+                                <span className="font-black text-slate-950 text-xs">{c.user?.name}</span>
+                                <span className="text-[10px] text-slate-500 font-mono">
                                   ({c.user?.role})
                                 </span>
                                 {isInternal && (
-                                  <span className="flex items-center gap-1 rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-500/40">
+                                  <span className="flex items-center gap-1 rounded-md bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-300">
                                     <Lock className="h-2.5 w-2.5" /> Staff Internal Note
                                   </span>
                                 )}
@@ -776,20 +804,20 @@ const TicketDetails = () => {
                               </span>
                             </div>
 
-                            <p className="mt-3 text-xs sm:text-[13px] text-slate-200 leading-relaxed whitespace-pre-wrap">
+                            <p className="mt-3 text-xs sm:text-[13px] text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
                               {c.message}
                             </p>
 
                             {/* Comment Attachments */}
                             {c.attachments?.length > 0 && (
-                              <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                              <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-slate-200">
                                 {c.attachments.map((f, i) => (
                                   <a
                                     key={i}
                                     href={getFileUrl(f.filePath)}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] text-indigo-400 hover:text-white"
+                                    className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[11px] text-amber-800 hover:text-amber-950 border border-slate-200"
                                   >
                                     <Paperclip className="h-3 w-3" />
                                     <span>{f.fileName}</span>
@@ -804,15 +832,15 @@ const TicketDetails = () => {
                   </div>
 
                   {/* Add Message Box */}
-                  <form onSubmit={handleCommentSubmit} className="space-y-3 pt-4 border-t border-slate-800">
+                  <form onSubmit={handleCommentSubmit} className="space-y-3 pt-4 border-t border-slate-200">
                     {isSupportStaff && (
                       <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-2 text-xs text-amber-400 cursor-pointer select-none font-semibold">
+                        <label className="flex items-center gap-2 text-xs text-amber-800 cursor-pointer select-none font-bold">
                           <input
                             type="checkbox"
                             checked={isInternalNote}
                             onChange={(e) => setIsInternalNote(e.target.checked)}
-                            className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-amber-400"
+                            className="h-4 w-4 rounded border-slate-300 bg-white text-amber-500 focus:ring-amber-400"
                           />
                           <Lock className="h-3.5 w-3.5" />
                           <span>Internal Staff Note (Hidden from employee)</span>
@@ -829,17 +857,13 @@ const TicketDetails = () => {
                           ? 'Add internal diagnostic comments, root cause analysis, or handover notes...'
                           : 'Write a response or question regarding this incident...'
                       }
-                      className={`w-full rounded-2xl border p-3.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-all ${
-                        isInternalNote
-                          ? 'border-amber-500/40 bg-amber-950/20 focus:border-amber-400 focus:ring-1 focus:ring-amber-400'
-                          : 'border-slate-700/80 bg-slate-900/80 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
-                      }`}
+                      className="w-full rounded-2xl border border-slate-300 bg-slate-50 p-3.5 text-xs text-slate-900 placeholder-slate-400 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all"
                     />
 
                     <div className="flex items-center justify-between">
                       <div>
-                        <label className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3.5 py-2 text-xs text-slate-300 hover:bg-slate-700 cursor-pointer transition-colors">
-                          <Paperclip className="h-3.5 w-3.5 text-indigo-400" />
+                        <label className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors shadow-sm">
+                          <Paperclip className="h-3.5 w-3.5 text-amber-600" />
                           <span>Attach log/file</span>
                           <input
                             type="file"
@@ -853,7 +877,7 @@ const TicketDetails = () => {
                           />
                         </label>
                         {commentFiles.length > 0 && (
-                          <span className="ml-2 text-xs text-slate-400 font-mono">
+                          <span className="ml-2 text-xs text-slate-500 font-mono">
                             {commentFiles.length} file(s) ready
                           </span>
                         )}
@@ -862,14 +886,14 @@ const TicketDetails = () => {
                       <button
                         type="submit"
                         disabled={submittingComment}
-                        className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold text-white shadow-lg transition-all active:scale-[0.98] ${
+                        className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold shadow-md transition-all active:scale-[0.98] ${
                           isInternalNote
-                            ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/30'
-                            : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/30'
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30'
+                            : 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
                         }`}
                       >
                         {submittingComment ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
                         ) : (
                           <>
                             <span>{isInternalNote ? 'Save Internal Note' : 'Send Message'}</span>
@@ -882,24 +906,24 @@ const TicketDetails = () => {
                 </div>
               ) : (
                 /* Audit Timeline */
-                <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
+                <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                   {auditLogs.map((log) => (
                     <div key={log._id} className="relative">
-                      <div className="absolute -left-6 top-1.5 h-3 w-3 rounded-full bg-indigo-500 ring-4 ring-slate-900" />
-                      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-xs">
-                        <div className="flex items-center justify-between text-slate-400">
-                          <span className="font-bold text-white">
+                      <div className="absolute -left-6 top-1.5 h-3 w-3 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs">
+                        <div className="flex items-center justify-between text-slate-500">
+                          <span className="font-black text-slate-950 text-xs">
                             {log.performedBy?.name || 'System Worker'}
                           </span>
                           <span className="text-[10px] text-slate-500 font-mono">
                             {new Date(log.createdAt).toLocaleString()}
                           </span>
                         </div>
-                        <p className="mt-1 font-mono text-[11px] text-indigo-400 font-bold">
+                        <p className="mt-1 font-mono text-[11px] text-amber-800 font-bold">
                           {log.action}
                         </p>
                         {log.notes && (
-                          <p className="mt-1 text-slate-300 text-xs leading-relaxed">{log.notes}</p>
+                          <p className="mt-1 text-slate-700 text-xs leading-relaxed font-medium">{log.notes}</p>
                         )}
                       </div>
                     </div>
@@ -913,16 +937,17 @@ const TicketDetails = () => {
         {/* Right 1 Col: Metadata, SLA, Assignee, Requester */}
         <div className="space-y-6">
           {/* SLA Target Monitor */}
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800/80 shadow-xl space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          {/* SLA Target Monitor */}
+          <div className="rounded-3xl p-5 border border-slate-200 bg-white shadow-md space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
               <span>SLA Performance Targets</span>
               <PriorityBadge priority={ticket.priority} size="xs" />
             </h3>
 
             <div className="space-y-3 text-xs">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3.5 space-y-1">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-medium">First Response SLA:</span>
+                  <span className="text-slate-600 font-medium">First Response SLA:</span>
                   <SLAIndicator ticket={ticket} type="response" />
                 </div>
                 {ticket.responseDueAt && (
@@ -931,15 +956,15 @@ const TicketDetails = () => {
                   </p>
                 )}
                 {ticket.respondedAt && (
-                  <p className="text-[10px] text-emerald-400 font-mono">
+                  <p className="text-[10px] text-emerald-600 font-mono font-bold">
                     ✓ First Responded: {new Date(ticket.respondedAt).toLocaleTimeString()}
                   </p>
                 )}
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3.5 space-y-1">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-medium">Resolution SLA:</span>
+                  <span className="text-slate-600 font-medium">Resolution SLA:</span>
                   <SLAIndicator ticket={ticket} type="resolution" />
                 </div>
                 {ticket.resolutionDueAt && (
@@ -952,39 +977,39 @@ const TicketDetails = () => {
           </div>
 
           {/* Ticket Information */}
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800/80 shadow-xl space-y-3 text-xs">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <div className="rounded-3xl p-5 border border-slate-200 bg-white shadow-md space-y-3 text-xs">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
               Incident Metadata
             </h3>
 
-            <div className="flex justify-between py-2 border-b border-slate-800/60">
-              <span className="text-slate-400">Category:</span>
-              <span className="font-bold text-white">{ticket.category}</span>
+            <div className="flex justify-between py-2 border-b border-slate-100">
+              <span className="text-slate-500 font-medium">Category:</span>
+              <span className="font-bold text-slate-950">{ticket.category}</span>
             </div>
 
             {ticket.subcategory && (
-              <div className="flex justify-between py-2 border-b border-slate-800/60">
-                <span className="text-slate-400">Subcategory:</span>
-                <span className="text-slate-300">{ticket.subcategory}</span>
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Subcategory:</span>
+                <span className="text-slate-900 font-semibold">{ticket.subcategory}</span>
               </div>
             )}
 
-            <div className="flex justify-between py-2 border-b border-slate-800/60">
-              <span className="text-slate-400">Department:</span>
-              <span className="text-slate-300">{ticket.departmentName}</span>
+            <div className="flex justify-between py-2 border-b border-slate-100">
+              <span className="text-slate-500 font-medium">Department:</span>
+              <span className="text-slate-900 font-semibold">{ticket.departmentName}</span>
             </div>
 
-            <div className="flex justify-between py-2 border-b border-slate-800/60">
-              <span className="text-slate-400">Logged On:</span>
-              <span className="text-slate-300 font-mono">
+            <div className="flex justify-between py-2 border-b border-slate-100">
+              <span className="text-slate-500 font-medium">Logged On:</span>
+              <span className="text-slate-900 font-mono font-medium">
                 {new Date(ticket.createdAt).toLocaleDateString()}
               </span>
             </div>
 
             {ticket.closedAt && (
-              <div className="flex justify-between py-2 border-b border-slate-800/60">
-                <span className="text-slate-400">Closed On:</span>
-                <span className="text-emerald-400 font-mono">
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Closed On:</span>
+                <span className="text-emerald-700 font-mono font-bold">
                   {new Date(ticket.closedAt).toLocaleDateString()}
                 </span>
               </div>
@@ -992,8 +1017,8 @@ const TicketDetails = () => {
           </div>
 
           {/* Assigned Specialist */}
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800/80 shadow-xl space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="rounded-3xl p-5 border border-slate-200 bg-white shadow-md space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Assigned Specialist
             </h3>
 
@@ -1003,28 +1028,28 @@ const TicketDetails = () => {
                   {ticket.assignedTo.name?.charAt(0)}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-white">{ticket.assignedTo.name}</h4>
-                  <p className="text-xs text-slate-400">{ticket.assignedTo.email}</p>
-                  <p className="text-[11px] text-emerald-400 font-medium mt-0.5">
+                  <h4 className="text-sm font-black text-slate-950">{ticket.assignedTo.name}</h4>
+                  <p className="text-xs text-slate-500">{ticket.assignedTo.email}</p>
+                  <p className="text-[11px] text-emerald-700 font-bold mt-0.5">
                     {ticket.assignedTo.specialization || 'IT Support Specialist'}
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-700/80 p-4 text-center text-xs text-slate-500">
+              <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-4 text-center text-xs text-amber-800 font-medium">
                 Unassigned ticket. In queue for triage.
               </div>
             )}
 
             {isSupportStaff && agents.length > 0 && (
-              <div className="pt-2 border-t border-slate-800">
-                <label className="block text-[11px] text-slate-400 mb-1 font-medium">
+              <div className="pt-2 border-t border-slate-100">
+                <label className="block text-[11px] text-slate-600 mb-1 font-semibold">
                   Reassign to Specialist:
                 </label>
                 <select
                   value={ticket.assignedTo?._id || ''}
                   onChange={(e) => handleAssign(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 py-2 px-3 text-xs text-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 px-3 text-xs text-slate-900 focus:outline-none focus:border-amber-500"
                 >
                   <option value="">Select Agent...</option>
                   {agents.map((ag) => (
@@ -1038,18 +1063,18 @@ const TicketDetails = () => {
           </div>
 
           {/* Requester Info */}
-          <div className="glass-panel rounded-3xl p-5 border border-slate-800/80 shadow-xl space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="rounded-3xl p-5 border border-slate-200 bg-white shadow-md space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Requester Profile
             </h3>
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-extrabold text-white shadow-md shadow-indigo-500/20">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 text-sm font-black text-slate-950 shadow-md shadow-amber-500/20">
                 {ticket.createdBy?.name?.charAt(0)}
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">{ticket.createdBy?.name}</h4>
-                <p className="text-xs text-slate-400">{ticket.createdBy?.email}</p>
-                <p className="text-[11px] text-indigo-400 font-semibold mt-0.5">
+                <h4 className="text-sm font-black text-slate-950">{ticket.createdBy?.name}</h4>
+                <p className="text-xs text-slate-500">{ticket.createdBy?.email}</p>
+                <p className="text-[11px] text-amber-800 font-bold mt-0.5">
                   {ticket.createdBy?.departmentName}
                 </p>
               </div>

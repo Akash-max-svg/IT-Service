@@ -15,7 +15,9 @@ import {
   RotateCcw,
   CheckCircle2,
   X,
+  Download,
 } from 'lucide-react';
+import { downloadTicketsListPDF } from '../utils/pdfGenerator';
 
 const MyTickets = () => {
   const { user } = useAuth();
@@ -136,6 +138,16 @@ const MyTickets = () => {
               <LayoutGrid className="h-4 w-4" />
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => downloadTicketsListPDF(tickets, 'My Incident History Report')}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold px-3.5 py-2.5 text-xs transition-colors shadow-sm"
+            title="Download problem history in PDF format"
+          >
+            <Download className="h-4 w-4 text-amber-600" />
+            <span>Download PDF</span>
+          </button>
 
           {normalizeRole(user?.role) === 'Employee' && (
             <button

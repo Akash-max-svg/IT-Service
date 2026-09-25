@@ -259,39 +259,33 @@ const Navbar = ({ onToggleSidebar }) => {
               setShowUserMenu(!showUserMenu);
               setShowNotifications(false);
             }}
-            className="flex items-center gap-2.5 rounded-xl p-1.5 hover:bg-slate-800/80 transition-all border border-transparent hover:border-slate-700/60"
+            className="flex items-center gap-2.5 rounded-xl p-1.5 hover:bg-amber-100/60 transition-all border border-transparent hover:border-amber-300"
           >
             <div
-              className={`relative flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-white shadow-md ${
-                currentTheme === 'admin'
-                  ? 'bg-gradient-to-br from-purple-500 via-fuchsia-600 to-indigo-600 shadow-purple-500/25'
-                  : currentTheme === 'agent'
-                  ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 shadow-emerald-500/25'
-                  : 'bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 shadow-sky-500/25'
-              }`}
+              className="relative flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black text-slate-950 shadow-md bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 shadow-amber-500/20"
             >
               {user?.name?.charAt(0) || 'U'}
             </div>
             <div className="hidden text-left md:block">
-              <div className="text-xs font-bold text-white leading-tight">{user?.name}</div>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 leading-tight mt-0.5">
+              <div className="text-xs font-black text-slate-950 leading-tight">{user?.name}</div>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-600 leading-tight mt-0.5">
                 {getRoleIcon(userRole)}
-                <span className="font-medium">{getRoleDisplayName(userRole)}</span>
+                <span className="font-bold text-amber-800">{getRoleDisplayName(userRole)}</span>
               </div>
             </div>
-            <ChevronDown className="h-4 w-4 text-slate-400" />
+            <ChevronDown className="h-4 w-4 text-slate-600" />
           </button>
 
           {showUserMenu && (
-            <div className="glass-panel absolute right-0 mt-3 w-64 rounded-2xl p-2 shadow-2xl z-50 backdrop-blur-2xl animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-3 py-2.5 border-b border-slate-800 mb-1">
-                <p className="text-xs font-bold text-white">{user?.name}</p>
-                <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+            <div className="absolute right-0 mt-3 w-64 rounded-2xl p-2 shadow-2xl z-50 bg-white border border-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-3 py-2.5 border-b border-slate-100 mb-1">
+                <p className="text-xs font-black text-slate-950">{user?.name}</p>
+                <p className="text-[11px] text-slate-600 truncate font-medium">{user?.email}</p>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <span className="rounded bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300 uppercase tracking-wider font-mono">
+                  <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 uppercase tracking-wider font-mono">
                     {user?.departmentName || 'General Dept'}
                   </span>
-                  <span className="text-[10px] text-emerald-400 font-medium">● Online</span>
+                  <span className="text-[10px] text-emerald-600 font-bold">● Online</span>
                 </div>
               </div>
 
@@ -300,14 +294,14 @@ const Navbar = ({ onToggleSidebar }) => {
                   setShowUserMenu(false);
                   navigate('/settings');
                 }}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-slate-950 transition-colors"
               >
-                <UserIcon className="h-4 w-4 text-slate-400" /> Profile & System Settings
+                <UserIcon className="h-4 w-4 text-amber-600" /> Profile & System Settings
               </button>
 
               <button
                 onClick={logout}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors mt-1"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors mt-1"
               >
                 <LogOut className="h-4 w-4" /> Sign Out
               </button>

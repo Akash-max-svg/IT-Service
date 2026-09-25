@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import SLAIndicator from './SLAIndicator';
-import { Eye, Paperclip, ChevronRight, Inbox, Clock, User, ArrowUpRight } from 'lucide-react';
+import { Eye, Paperclip, ChevronRight, Inbox, Clock, User, ArrowUpRight, Download } from 'lucide-react';
+import { downloadTicketPDF } from '../utils/pdfGenerator';
 
 const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
   const navigate = useNavigate();
@@ -102,7 +103,7 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 text-[10px] font-bold text-white shadow-sm">
                       {ticket.assignedTo.name?.charAt(0)}
                     </div>
-                    <span className="truncate max-w-[110px] font-medium text-slate-800">
+                    <span className="truncate max-w-[110px] font-bold text-slate-950">
                       {ticket.assignedTo.name}
                     </span>
                   </div>
@@ -128,17 +129,30 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
 
               {/* Action Button */}
               <td className="px-5 py-4 text-right whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/tickets/${ticket._id}`);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 text-xs transition-all shadow-sm"
-                >
-                  <span>View Problem</span>
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </button>
+                <div className="inline-flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadTicketPDF(ticket);
+                    }}
+                    className="p-1.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-white text-slate-700 hover:text-amber-800 hover:bg-amber-50 transition-all shadow-sm"
+                    title="Download Ticket Problem Report (PDF)"
+                  >
+                    <Download className="h-3.5 w-3.5 text-amber-600" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/tickets/${ticket._id}`);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 text-xs transition-all shadow-sm"
+                  >
+                    <span>View Problem</span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

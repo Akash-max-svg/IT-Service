@@ -62,7 +62,7 @@ const TicketCard = ({ ticket }) => {
               <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-600 flex items-center justify-center text-[9px] font-bold text-slate-950">
                 {ticket.assignedTo.name?.charAt(0)}
               </div>
-              <span className="truncate max-w-[100px] text-[11px] font-medium text-slate-700">
+              <span className="truncate max-w-[100px] text-[11px] font-bold text-slate-950">
                 {ticket.assignedTo.name}
               </span>
             </div>
