@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import * as THREE from 'three';
-import VantaNet from 'vanta/dist/vanta.net.min';
+import VantaHalo from 'vanta/dist/vanta.halo.min';
+import VantaBirds from 'vanta/dist/vanta.birds.min';
 import useAuth from '../hooks/useAuth';
 import {
   User,
@@ -45,39 +46,64 @@ const Register = () => {
       window.THREE = THREE;
     }
 
-    const netInit = VantaNet.default || VantaNet;
-    if (!effectRef.current && vantaRef.current) {
+    if (effectRef.current) {
       try {
-        effectRef.current = netInit({
-          el: vantaRef.current,
-          THREE: THREE,
-          mouseControls: true,
-          touchControls: true,
-          gyroControls: false,
-          minHeight: 200.0,
-          minWidth: 200.0,
-          scale: 1.0,
-          scaleMobile: 1.0,
-          color: 0x10b981,
-          backgroundColor: 0x020617,
-          backgroundAlpha: 0.35,
-          points: 12.0,
-          maxDistance: 22.0,
-          spacing: 16.0,
-          showDots: true,
-        });
+        effectRef.current.destroy();
+      } catch (e) {
+        // ignore
+      }
+      effectRef.current = null;
+    }
+
+    if (vantaRef.current) {
+      try {
+        const isAgentOrAdmin = formData.role === 'Agent' || formData.role === 'Admin';
+
+        if (isAgentOrAdmin) {
+          // VANTA.BIRDS for Agent & Admin
+          const birdsInit = (window.VANTA && window.VANTA.BIRDS) || VantaBirds.default || VantaBirds;
+          effectRef.current = birdsInit({
+            el: vantaRef.current,
+            THREE: THREE,
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.0,
+            minWidth: 200.0,
+            scale: 1.0,
+            scaleMobile: 1.0,
+            backgroundColor: 0x000000,
+          });
+        } else {
+          // VANTA.HALO for Employee / Default
+          const haloInit = (window.VANTA && window.VANTA.HALO) || VantaHalo.default || VantaHalo;
+          effectRef.current = haloInit({
+            el: vantaRef.current,
+            THREE: THREE,
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.0,
+            minWidth: 200.0,
+            backgroundColor: 0x000000,
+          });
+        }
       } catch (err) {
-        console.error('Failed to init Vanta on Register:', err);
+        console.error('Failed to init Vanta effect on Register:', err);
       }
     }
 
     return () => {
       if (effectRef.current) {
-        effectRef.current.destroy();
+        try {
+          effectRef.current.destroy();
+        } catch (e) {
+          // ignore
+        }
         effectRef.current = null;
       }
     };
-  }, []);
+  }, [formData.role]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -129,16 +155,9 @@ const Register = () => {
   return (
     <div
       ref={vantaRef}
-      className="signup-page relative flex min-h-screen items-center justify-center bg-slate-950 p-4 sm:p-6 lg:p-8 overflow-hidden"
+      className="signup-page relative flex min-h-screen items-center justify-center bg-black p-4 sm:p-6 lg:p-8 overflow-hidden"
+      style={{ backgroundColor: '#000000' }}
     >
-      {/* Background image layer beneath Vanta network */}
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none z-0"
-        style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1920&q=80')",
-        }}
-      />
 
       <div className="relative w-full max-w-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
         <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-slate-800 shadow-2xl backdrop-blur-2xl">
