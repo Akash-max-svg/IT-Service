@@ -97,14 +97,28 @@ function App() {
               }
             >
               <Route path="/" element={<RootRedirect />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/create-ticket" element={<CreateTicket />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['Employee']}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/create-ticket"
+                element={
+                  <ProtectedRoute allowedRoles={['Employee']}>
+                    <CreateTicket />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/my-tickets" element={<MyTickets />} />
               <Route path="/tickets/:id" element={<TicketDetails />} />
               <Route
                 path="/agent"
                 element={
-                  <ProtectedRoute allowedRoles={['Agent', 'Admin']}>
+                  <ProtectedRoute allowedRoles={['Agent']}>
                     <AgentDashboard />
                   </ProtectedRoute>
                 }

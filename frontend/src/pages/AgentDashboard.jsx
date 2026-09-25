@@ -140,12 +140,10 @@ const AgentDashboard = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/create-ticket')}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-5 py-3 text-xs font-bold text-white shadow-xl shadow-emerald-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
-            >
-              <Zap className="h-4 w-4" /> Log Incoming Request
-            </button>
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-2.5 text-xs font-bold text-emerald-300 shadow-md">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Triage Queue Active</span>
+            </div>
           </div>
         </div>
       </div>

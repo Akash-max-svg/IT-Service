@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { createContext, useContext, useMemo } from 'react';
 import useAuth from '../hooks/useAuth';
 import { normalizeRole } from '../utils/roleUtils';
 
@@ -15,6 +14,7 @@ export const THEME_CONFIGS = {
     badgeClass: 'border-purple-500/40 bg-purple-500/15 text-purple-300',
     description: 'Royal Obsidian & Deep Velvet Violet Command Center',
     iconName: 'Shield',
+    positionTitle: 'Administrator Console',
   },
   employee: {
     id: 'employee',
@@ -25,6 +25,7 @@ export const THEME_CONFIGS = {
     badgeClass: 'border-sky-500/40 bg-sky-500/15 text-sky-300',
     description: 'Modern Oceanic Midnight & Electric Sapphire Workspace',
     iconName: 'Briefcase',
+    positionTitle: 'Employee Service Desk',
   },
   agent: {
     id: 'agent',
@@ -35,50 +36,21 @@ export const THEME_CONFIGS = {
     badgeClass: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300',
     description: 'Tactical Cyber Matrix & Emerald Aurora Operations',
     iconName: 'Headphones',
+    positionTitle: 'Support Specialist Console',
   },
 };
 
 export const ThemeProvider = ({ children }) => {
   const { user } = useAuth();
-  const location = useLocation();
 
-  // Mode: 'auto' (follow active role/page) or explicit 'admin' | 'employee' | 'agent'
-  const [themeMode, setThemeModeState] = useState(() => {
-    return localStorage.getItem('portal_theme_preference') || 'auto';
-  });
-
-  const setThemeMode = (mode) => {
-    setThemeModeState(mode);
-    localStorage.setItem('portal_theme_preference', mode);
-  };
-
-  // Determine current active theme
-  const getComputedTheme = () => {
-    if (themeMode !== 'auto' && THEME_CONFIGS[themeMode]) {
-      return themeMode;
-    }
-
-    const pathname = location.pathname.toLowerCase();
-
-    // Check pathname context first
-    if (pathname.startsWith('/admin') || pathname.startsWith('/users')) {
-      return 'admin';
-    }
-    if (pathname.startsWith('/agent')) {
-      return 'agent';
-    }
-    if (pathname.startsWith('/dashboard') || pathname.startsWith('/create-ticket')) {
-      return 'employee';
-    }
-
-    // Default to user's normalized role for shared pages like /my-tickets, /reports, /settings
+  // Position is strictly locked to authenticated user role - cannot shift one-to-one
+  const currentTheme = useMemo(() => {
     const role = normalizeRole(user?.role);
     if (role === 'Admin') return 'admin';
     if (role === 'Agent') return 'agent';
     return 'employee';
-  };
+  }, [user]);
 
-  const currentTheme = getComputedTheme();
   const themeConfig = THEME_CONFIGS[currentTheme] || THEME_CONFIGS.employee;
 
   return (
@@ -86,8 +58,6 @@ export const ThemeProvider = ({ children }) => {
       value={{
         currentTheme,
         themeConfig,
-        themeMode,
-        setThemeMode,
         availableThemes: THEME_CONFIGS,
       }}
     >

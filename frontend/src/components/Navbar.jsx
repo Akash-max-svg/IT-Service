@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { notificationAPI, getSocket } from '../services/api';
-import { normalizeRole, getRoleDisplayName, getRoleBadgeStyle } from '../utils/roleUtils';
+import { normalizeRole, getRoleDisplayName } from '../utils/roleUtils';
 import {
   Bell,
   Check,
@@ -14,28 +14,23 @@ import {
   Briefcase,
   ChevronDown,
   Sparkles,
-  Search,
-  Activity,
+  Lock,
   CheckCheck,
-  Palette,
-  CheckCircle2,
 } from 'lucide-react';
 
 const Navbar = ({ onToggleSidebar }) => {
-  const { user, logout, login } = useAuth();
-  const { currentTheme, themeConfig, themeMode, setThemeMode, availableThemes } = useTheme();
+  const { user, logout } = useAuth();
+  const { currentTheme, themeConfig } = useTheme();
   const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [filterUnreadOnly, setFilterUnreadOnly] = useState(false);
 
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
-  const themeMenuRef = useRef(null);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -80,9 +75,6 @@ const Navbar = ({ onToggleSidebar }) => {
       }
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setShowUserMenu(false);
-      }
-      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
-        setShowThemeMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -188,155 +180,25 @@ const Navbar = ({ onToggleSidebar }) => {
         </div>
       </div>
 
-      {/* Right Controls: Role Badge, Theme Picker, Notifications & User Menu */}
+      {/* Right Controls: Locked Position Badge, Notifications & User Menu */}
       <div className="flex items-center gap-2.5 sm:gap-3">
-        {/* Verified User Role Badge */}
-        <div className="hidden md:flex items-center gap-2 rounded-xl bg-slate-900/80 px-3 py-1.5 border border-slate-800 shadow-inner">
-          <span className="text-[11px] font-medium text-slate-400">Role:</span>
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-xs font-bold ${
-              userRole === 'Admin'
-                ? 'border-purple-500/40 bg-purple-500/15 text-purple-300'
-                : userRole === 'Agent'
-                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                : 'border-sky-500/40 bg-sky-500/15 text-sky-300'
-            }`}
-          >
-            {getRoleIcon(userRole)}
-            <span>{getRoleDisplayName(userRole)}</span>
+        {/* Strictly Locked Login Position Indicator (User cannot shift one-to-one) */}
+        <div
+          className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-bold shadow-inner ${
+            userRole === 'Admin'
+              ? 'border-purple-500/40 bg-purple-950/50 text-purple-200'
+              : userRole === 'Agent'
+              ? 'border-emerald-500/40 bg-emerald-950/50 text-emerald-200'
+              : 'border-sky-500/40 bg-sky-950/50 text-sky-200'
+          }`}
+          title="Login position strictly locked to your authenticated role. Shifting between positions is disabled."
+        >
+          {getRoleIcon(userRole)}
+          <span>{getRoleDisplayName(userRole)}</span>
+          <span className="hidden sm:inline-flex items-center gap-1 text-[10px] opacity-80 font-mono bg-black/30 px-1.5 py-0.5 rounded">
+            <Lock className="h-2.5 w-2.5" />
+            <span>Locked</span>
           </span>
-        </div>
-
-        {/* Dynamic Theme Switcher Pill & Dropdown */}
-        <div className="relative" ref={themeMenuRef}>
-          <button
-            type="button"
-            onClick={() => {
-              setShowThemeMenu(!showThemeMenu);
-              setShowNotifications(false);
-              setShowUserMenu(false);
-            }}
-            className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-all shadow-sm ${
-              currentTheme === 'admin'
-                ? 'border-purple-500/40 bg-purple-950/40 text-purple-200 hover:bg-purple-900/40 shadow-purple-950/50'
-                : currentTheme === 'agent'
-                ? 'border-emerald-500/40 bg-emerald-950/40 text-emerald-200 hover:bg-emerald-900/40 shadow-emerald-950/50'
-                : 'border-sky-500/40 bg-sky-950/40 text-sky-200 hover:bg-sky-900/40 shadow-sky-950/50'
-            }`}
-            title="Switch Background Theme & Color"
-          >
-            <Palette className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline capitalize">{currentTheme} Theme</span>
-            <ChevronDown className="h-3 w-3 opacity-70" />
-          </button>
-
-          {showThemeMenu && (
-            <div className="glass-panel absolute right-0 mt-3 w-72 rounded-2xl p-3 shadow-2xl z-50 backdrop-blur-2xl animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="pb-2.5 mb-2 border-b border-slate-800">
-                <span className="text-xs font-extrabold text-white flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-indigo-400" />
-                  Select Portal Theme
-                </span>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Choose a role color palette or auto-sync
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                {/* Auto Role-based */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setThemeMode('auto');
-                    setShowThemeMenu(false);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
-                    themeMode === 'auto'
-                      ? 'bg-indigo-600/20 text-indigo-200 border border-indigo-500/30'
-                      : 'text-slate-300 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Sparkles className="h-4 w-4 text-indigo-400" />
-                    <div className="text-left">
-                      <div className="font-bold">Auto (Role Sync)</div>
-                      <div className="text-[10px] text-slate-400">Adapts to Admin / Employee / Agent</div>
-                    </div>
-                  </div>
-                  {themeMode === 'auto' && <Check className="h-4 w-4 text-indigo-400 shrink-0" />}
-                </button>
-
-                {/* Admin Theme */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setThemeMode('admin');
-                    setShowThemeMenu(false);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
-                    themeMode === 'admin'
-                      ? 'bg-purple-600/25 text-purple-200 border border-purple-500/40'
-                      : 'text-slate-300 hover:bg-purple-950/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-3.5 w-3.5 rounded-full bg-purple-500 ring-2 ring-purple-400/40" />
-                    <div className="text-left">
-                      <div className="font-bold text-purple-300">Admin Mode</div>
-                      <div className="text-[10px] text-slate-400">Royal Obsidian & Deep Violet</div>
-                    </div>
-                  </div>
-                  {themeMode === 'admin' && <Check className="h-4 w-4 text-purple-400 shrink-0" />}
-                </button>
-
-                {/* Employee Theme */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setThemeMode('employee');
-                    setShowThemeMenu(false);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
-                    themeMode === 'employee'
-                      ? 'bg-sky-600/25 text-sky-200 border border-sky-500/40'
-                      : 'text-slate-300 hover:bg-sky-950/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-3.5 w-3.5 rounded-full bg-sky-500 ring-2 ring-sky-400/40" />
-                    <div className="text-left">
-                      <div className="font-bold text-sky-300">Employee Mode</div>
-                      <div className="text-[10px] text-slate-400">Oceanic Midnight & Electric Sapphire</div>
-                    </div>
-                  </div>
-                  {themeMode === 'employee' && <Check className="h-4 w-4 text-sky-400 shrink-0" />}
-                </button>
-
-                {/* Agent Theme */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setThemeMode('agent');
-                    setShowThemeMenu(false);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
-                    themeMode === 'agent'
-                      ? 'bg-emerald-600/25 text-emerald-200 border border-emerald-500/40'
-                      : 'text-slate-300 hover:bg-emerald-950/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-emerald-400/40" />
-                    <div className="text-left">
-                      <div className="font-bold text-emerald-300">Agent Mode</div>
-                      <div className="text-[10px] text-slate-400">Cyber Matrix & Tactical Emerald</div>
-                    </div>
-                  </div>
-                  {themeMode === 'agent' && <Check className="h-4 w-4 text-emerald-400 shrink-0" />}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Notifications Dropdown */}
@@ -346,7 +208,6 @@ const Navbar = ({ onToggleSidebar }) => {
             onClick={() => {
               setShowNotifications(!showNotifications);
               setShowUserMenu(false);
-              setShowThemeMenu(false);
             }}
             className="relative rounded-xl p-2.5 text-slate-400 hover:bg-slate-800/80 hover:text-white transition-all border border-transparent hover:border-slate-700/60"
           >
@@ -439,7 +300,6 @@ const Navbar = ({ onToggleSidebar }) => {
             onClick={() => {
               setShowUserMenu(!showUserMenu);
               setShowNotifications(false);
-              setShowThemeMenu(false);
             }}
             className="flex items-center gap-2.5 rounded-xl p-1.5 hover:bg-slate-800/80 transition-all border border-transparent hover:border-slate-700/60"
           >

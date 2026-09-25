@@ -13,11 +13,19 @@ const {
 const { sendTicketEmail } = require('../services/emailService');
 const { normalizeRole, hasRole } = require('../utils/roleUtils');
 
-// @desc    Create a new incident ticket
+// @desc    Create a new incident complaint ticket
 // @route   POST /api/tickets
-// @access  Private (Employee, Agent, Admin)
+// @access  Private (Employee only - Admins and Agents cannot complain)
 const createTicket = async (req, res) => {
   try {
+    // Only Employees are authorized to lodge complaint tickets
+    const userRole = normalizeRole(req.user?.role);
+    if (userRole !== 'Employee') {
+      return res.status(403).json({
+        message: 'Access Denied: Only employees are authorized to lodge complaint tickets. Administrators and Agents cannot complain.',
+      });
+    }
+
     const { title, description, category, subcategory, priority, departmentName, tags } = req.body;
 
     if (!title || !description || !category) {

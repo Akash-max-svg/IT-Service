@@ -28,7 +28,7 @@ const handleUpload = (req, res, next) => {
 
 router
   .route('/')
-  .post(handleUpload, createTicket)
+  .post(authorize('Employee'), handleUpload, createTicket)
   .get(getTickets);
 
 router.route('/:id').get(getTicketById);

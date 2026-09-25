@@ -85,7 +85,7 @@ const Dashboard = () => {
               {getGreeting()}, {user?.name?.split(' ')[0]} 👋
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-              Report equipment glitches, software installation issues, network connectivity problems, and follow ticket resolution in real-time.
+              Lodge equipment breakdown complaints, report software glitches, and track resolution in real-time.
             </p>
           </div>
 
@@ -95,7 +95,7 @@ const Dashboard = () => {
               className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 px-5 py-3 text-xs font-bold text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-600/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
               <PlusCircle className="h-4 w-4" />
-              <span>Submit IT Ticket</span>
+              <span>File a Complaint</span>
             </button>
             <button
               onClick={() => navigate('/my-tickets')}

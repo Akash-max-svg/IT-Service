@@ -38,7 +38,6 @@ const Sidebar = ({ isOpen, onClose }) => {
     sections.push({
       title: 'Incident Queue',
       links: [
-        { to: '/agent', label: 'Agent Workspace', icon: Headphones },
         { to: '/my-tickets', label: 'All Incidents', icon: Inbox },
       ],
     });
@@ -65,6 +64,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       title: 'Self-Service Desk',
       links: [
         { to: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard },
+        { to: '/create-ticket', label: 'File a Complaint', icon: PlusCircle },
         { to: '/my-tickets', label: 'My Incident History', icon: Inbox },
       ],
     });
@@ -87,12 +87,6 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   const getCtaGradient = () => {
-    if (currentTheme === 'admin') {
-      return 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 shadow-purple-600/30 hover:shadow-purple-600/50';
-    }
-    if (currentTheme === 'agent') {
-      return 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 shadow-emerald-600/30 hover:shadow-emerald-600/50';
-    }
     return 'bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 shadow-sky-600/30 hover:shadow-sky-600/50';
   };
 
@@ -126,20 +120,22 @@ const Sidebar = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* Quick Submit CTA Button */}
-          <div>
-            <button
-              onClick={() => {
-                navigate('/create-ticket');
-                if (onClose) onClose();
-              }}
-              className={`group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-xs font-bold text-white shadow-lg transition-all duration-200 active:scale-[0.98] ${getCtaGradient()}`}
-            >
-              <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <PlusCircle className="h-4 w-4" />
-              <span className="tracking-wide">Create New Ticket</span>
-            </button>
-          </div>
+          {/* Quick Submit CTA Button - Strictly for Employees only */}
+          {role === 'Employee' && (
+            <div>
+              <button
+                onClick={() => {
+                  navigate('/create-ticket');
+                  if (onClose) onClose();
+                }}
+                className={`group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-xs font-bold text-white shadow-lg transition-all duration-200 active:scale-[0.98] ${getCtaGradient()}`}
+              >
+                <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <PlusCircle className="h-4 w-4" />
+                <span className="tracking-wide">File a Complaint</span>
+              </button>
+            </div>
+          )}
 
           {/* Navigation Sections */}
           <nav className="space-y-4">

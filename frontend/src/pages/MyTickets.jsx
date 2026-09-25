@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ticketAPI } from '../services/api';
 import useAuth from '../hooks/useAuth';
+import { normalizeRole } from '../utils/roleUtils';
 import TicketTable from '../components/TicketTable';
 import TicketCard from '../components/TicketCard';
 import {
@@ -136,13 +137,15 @@ const MyTickets = () => {
             </button>
           </div>
 
-          <button
-            onClick={() => navigate('/create-ticket')}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 hover:bg-indigo-500 transition-all"
-          >
-            <PlusCircle className="h-4 w-4" />
-            <span>New Ticket</span>
-          </button>
+          {normalizeRole(user?.role) === 'Employee' && (
+            <button
+              onClick={() => navigate('/create-ticket')}
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-sky-600/30 hover:bg-sky-500 transition-all"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>File a Complaint</span>
+            </button>
+          )}
         </div>
       </div>
 

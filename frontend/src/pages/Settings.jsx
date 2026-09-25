@@ -20,7 +20,7 @@ import {
 
 const Settings = () => {
   const { user, updateUserState } = useAuth();
-  const { currentTheme, themeMode, setThemeMode, availableThemes } = useTheme();
+  const { currentTheme, themeConfig } = useTheme();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'categories', 'departments', 'sla'
 
   // Profile Form
@@ -282,102 +282,31 @@ const Settings = () => {
             </div>
           </form>
 
-          {/* Theme & Visual Appearance Customization */}
+          {/* Authenticated Login Position & Environment */}
           <div className="mt-8 pt-6 border-t border-slate-800/80">
             <div className="flex items-center gap-2 mb-2">
               <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                <Palette className="h-4 w-4" />
+                <Shield className="h-4 w-4" />
               </div>
-              <h4 className="text-sm font-bold text-white">Portal Background Theme & Color</h4>
+              <h4 className="text-sm font-bold text-white">Authenticated Login Position</h4>
             </div>
             <p className="text-xs text-slate-400 mb-4">
-              Select your preferred color theme or keep it synced to your active portal role (Admin, Employee, or Agent). Note: Login & Signup pages remain on their independent dark canvas.
+              Your portal environment, theme, and privilege set are strictly locked to your authenticated login position. Shifting between positions is disabled.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Auto Sync */}
-              <div
-                onClick={() => setThemeMode('auto')}
-                className={`cursor-pointer rounded-2xl p-4 border transition-all ${
-                  themeMode === 'auto'
-                    ? 'border-indigo-500 bg-indigo-950/40 ring-2 ring-indigo-500/30'
-                    : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-indigo-400" />
-                    <span className="font-bold text-xs text-white">Auto (Role Sync)</span>
-                  </div>
-                  {themeMode === 'auto' && <Check className="h-4 w-4 text-indigo-400" />}
+            <div className="rounded-2xl p-4 border border-slate-800 bg-slate-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className={`h-4 w-4 rounded-full shrink-0 ${
+                  currentTheme === 'admin' ? 'bg-purple-500 ring-2 ring-purple-400/40' : currentTheme === 'agent' ? 'bg-emerald-500 ring-2 ring-emerald-400/40' : 'bg-sky-500 ring-2 ring-sky-400/40'
+                }`} />
+                <div>
+                  <div className="text-xs font-bold text-white">{themeConfig.name} ({user?.role})</div>
+                  <div className="text-[11px] text-slate-400">{themeConfig.description}</div>
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  Automatically adapts theme based on whether you are viewing Admin, Employee, or Agent consoles.
-                </p>
               </div>
-
-              {/* Admin Theme */}
-              <div
-                onClick={() => setThemeMode('admin')}
-                className={`cursor-pointer rounded-2xl p-4 border transition-all ${
-                  themeMode === 'admin'
-                    ? 'border-purple-500 bg-purple-950/40 ring-2 ring-purple-500/30'
-                    : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50" />
-                    <span className="font-bold text-xs text-purple-300">Admin Mode</span>
-                  </div>
-                  {themeMode === 'admin' && <Check className="h-4 w-4 text-purple-400" />}
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Royal Obsidian & Deep Velvet Violet with command highlights.
-                </p>
-              </div>
-
-              {/* Employee Theme */}
-              <div
-                onClick={() => setThemeMode('employee')}
-                className={`cursor-pointer rounded-2xl p-4 border transition-all ${
-                  themeMode === 'employee'
-                    ? 'border-sky-500 bg-sky-950/40 ring-2 ring-sky-500/30'
-                    : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded-full bg-sky-500 shadow-sm shadow-sky-500/50" />
-                    <span className="font-bold text-xs text-sky-300">Employee Mode</span>
-                  </div>
-                  {themeMode === 'employee' && <Check className="h-4 w-4 text-sky-400" />}
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Oceanic Midnight & Electric Sapphire corporate workspace.
-                </p>
-              </div>
-
-              {/* Agent Theme */}
-              <div
-                onClick={() => setThemeMode('agent')}
-                className={`cursor-pointer rounded-2xl p-4 border transition-all ${
-                  themeMode === 'agent'
-                    ? 'border-emerald-500 bg-emerald-950/40 ring-2 ring-emerald-500/30'
-                    : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
-                    <span className="font-bold text-xs text-emerald-300">Agent Mode</span>
-                  </div>
-                  {themeMode === 'agent' && <Check className="h-4 w-4 text-emerald-400" />}
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Cyber Matrix & Tactical Emerald triage operations.
-                </p>
-              </div>
+              <span className="self-start sm:self-auto rounded-full bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-emerald-400 font-mono">
+                ● Position Locked
+              </span>
             </div>
           </div>
         </div>

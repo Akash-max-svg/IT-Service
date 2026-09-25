@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ticketAPI, adminAPI } from '../services/api';
 import useAuth from '../hooks/useAuth';
+import { normalizeRole } from '../utils/roleUtils';
 import PriorityBadge from '../components/PriorityBadge';
 import {
   UploadCloud,
@@ -96,6 +97,20 @@ const CreateTicket = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const role = normalizeRole(user?.role);
+
+  useEffect(() => {
+    if (user && role !== 'Employee') {
+      if (role === 'Admin') {
+        navigate('/admin', { replace: true });
+      } else if (role === 'Agent') {
+        navigate('/agent', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [user, role, navigate]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -195,6 +210,26 @@ const CreateTicket = () => {
     }
   };
 
+  if (user && role !== 'Employee') {
+    return (
+      <div className="mx-auto max-w-xl py-20 text-center animate-in fade-in">
+        <div className="glass-panel p-8 rounded-3xl border border-rose-500/30 shadow-2xl">
+          <AlertCircle className="h-12 w-12 text-rose-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Access Restricted</h2>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Only verified employees are authorized to lodge incident complaint tickets. Your current position is <strong>{role}</strong>.
+          </p>
+          <button
+            onClick={() => navigate(role === 'Admin' ? '/admin' : '/agent')}
+            className="mt-6 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
+          >
+            Return to {role} Console
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 animate-in fade-in duration-200">
       {/* Back button & Tag */}
@@ -207,18 +242,18 @@ const CreateTicket = () => {
           <ArrowLeft className="h-4 w-4" />
           <span>Back</span>
         </button>
-        <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-bold text-indigo-400 font-mono border border-indigo-500/25">
-          NEW INCIDENT REPORT
+        <span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-400 font-mono border border-sky-500/25">
+          EMPLOYEE COMPLAINT LODGEMENT
         </span>
       </div>
 
       <div className="glass-panel rounded-3xl p-6 sm:p-10 border border-slate-800/80 shadow-2xl space-y-6">
         <div className="border-b border-slate-800 pb-5">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Log IT Support Incident
+            File an IT Incident Complaint
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-slate-400">
-            Submit an equipment breakdown or service request directly to the support desk.
+            Submit equipment malfunctions, system access errors, or technical grievances for IT triage.
           </p>
         </div>
 
@@ -397,13 +432,13 @@ const CreateTicket = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-7 py-3 text-xs font-bold text-white shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 transition-all"
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 px-7 py-3 text-xs font-bold text-white shadow-xl shadow-sky-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 transition-all"
             >
               {submitting ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
                 <>
-                  <span>Submit Incident</span>
+                  <span>Submit Complaint</span>
                   <Send className="h-4 w-4" />
                 </>
               )}
