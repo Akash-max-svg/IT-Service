@@ -204,9 +204,9 @@ body {
 .badge-tag {
   display: inline-block;
   padding: 4px 12px;
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
@@ -269,13 +269,13 @@ body {
 }
 
 .demo-btn.admin {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
+  background: rgba(20, 184, 166, 0.15);
+  border-color: rgba(20, 184, 166, 0.35);
+  color: #5eead4;
 }
 
 .demo-btn.admin:hover {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(20, 184, 166, 0.3);
   color: #fff;
 }
 
@@ -389,7 +389,7 @@ body {
 .link-btn {
   background: none;
   border: none;
-  color: #a5b4fc;
+  color: #34d399;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
@@ -398,7 +398,7 @@ body {
 }
 
 .link-btn:hover {
-  color: #fff;
+  color: #10b981;
 }
 
 /* ThreeUI Container inside SignUp card */

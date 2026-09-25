@@ -192,11 +192,11 @@ const Login = () => {
         <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-slate-800 shadow-2xl backdrop-blur-2xl">
           {/* Header */}
           <div className="text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-600/30 scale-105">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-xl shadow-emerald-600/30 scale-105">
               <span className="font-mono text-2xl font-extrabold tracking-wider">IT</span>
             </div>
             <h1 className="mt-4 text-2xl font-extrabold text-white tracking-tight sm:text-3xl">
-              ServiceDesk <span className="text-indigo-400">Pro</span>
+              ServiceDesk <span className="text-emerald-400">Pro</span>
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-slate-400">
               Enterprise Incident Management & SLA Center
@@ -214,7 +214,7 @@ const Login = () => {
               }}
               className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
                 activeTab === 'login'
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -229,7 +229,7 @@ const Login = () => {
               }}
               className={`flex-1 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
                 activeTab === 'register'
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -248,9 +248,9 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => handleQuickDemo('admin@servicedesk.com', 'Admin@123')}
-                  className="flex flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 p-2 text-xs text-indigo-300 hover:bg-indigo-900/60 transition-all hover:scale-105"
+                  className="flex flex-col items-center justify-center rounded-xl border border-teal-500/30 bg-teal-950/40 p-2 text-xs text-teal-300 hover:bg-teal-900/60 transition-all hover:scale-105"
                 >
-                  <ShieldCheck className="h-4 w-4 mb-1 text-indigo-400" />
+                  <ShieldCheck className="h-4 w-4 mb-1 text-teal-400" />
                   <span className="font-bold">Admin</span>
                 </button>
                 <button
@@ -303,7 +303,7 @@ const Login = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com"
-                    className="w-full rounded-2xl border border-slate-700/80 bg-slate-900/90 py-3 pl-11 pr-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-inner transition-all"
+                    className="w-full rounded-2xl border border-slate-700/80 bg-slate-900/90 py-3 pl-11 pr-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-inner transition-all"
                   />
                 </div>
               </div>
@@ -320,7 +320,7 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-2xl border border-slate-700/80 bg-slate-900/90 py-3 pl-11 pr-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-inner transition-all"
+                    className="w-full rounded-2xl border border-slate-700/80 bg-slate-900/90 py-3 pl-11 pr-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-inner transition-all"
                   />
                 </div>
               </div>
@@ -328,7 +328,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 py-3.5 text-xs sm:text-sm font-bold text-white shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 transition-all"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 py-3.5 text-xs sm:text-sm font-bold text-white shadow-xl shadow-emerald-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 transition-all"
               >
                 {submitting ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -348,7 +348,7 @@ const Login = () => {
                     setActiveTab('register');
                     setError('');
                   }}
-                  className="font-bold text-indigo-400 hover:text-indigo-300"
+                  className="font-bold text-emerald-400 hover:text-emerald-300"
                 >
                   Create one now
                 </button>
@@ -396,11 +396,11 @@ const Login = () => {
                     onClick={() => setRegData({ ...regData, role: 'Admin' })}
                     className={`flex flex-col items-center justify-center rounded-2xl border p-2.5 transition-all ${
                       regData.role === 'Admin'
-                        ? 'border-indigo-500 bg-indigo-950/60 text-indigo-200 ring-2 ring-indigo-500/30'
+                        ? 'border-teal-500 bg-teal-950/60 text-teal-200 ring-2 ring-teal-500/30'
                         : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
                     }`}
                   >
-                    <ShieldCheck className="h-5 w-5 mb-1 text-indigo-400" />
+                    <ShieldCheck className="h-5 w-5 mb-1 text-teal-400" />
                     <span className="text-xs font-bold">Administrator</span>
                     <span className="text-[10px] text-slate-500">Full System Control</span>
                   </button>
@@ -419,7 +419,7 @@ const Login = () => {
                       value={regData.name}
                       onChange={(e) => setRegData({ ...regData, name: e.target.value })}
                       placeholder="e.g. Alex Morgan"
-                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -434,7 +434,7 @@ const Login = () => {
                       value={regData.email}
                       onChange={(e) => setRegData({ ...regData, email: e.target.value })}
                       placeholder="alex@company.com"
-                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -449,7 +449,7 @@ const Login = () => {
                     <select
                       value={regData.departmentName}
                       onChange={(e) => setRegData({ ...regData, departmentName: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white focus:border-emerald-500 focus:outline-none"
                     >
                       <option value="Information Technology">Information Technology</option>
                       <option value="Engineering">Engineering</option>
@@ -470,7 +470,7 @@ const Login = () => {
                       value={regData.phone}
                       onChange={(e) => setRegData({ ...regData, phone: e.target.value })}
                       placeholder="+1 (555) 012-3456"
-                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -486,7 +486,7 @@ const Login = () => {
                       value={regData.specialization}
                       onChange={(e) => setRegData({ ...regData, specialization: e.target.value })}
                       placeholder="e.g. Network & Security, Cloud Infrastructure, Hardware"
-                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -504,7 +504,7 @@ const Login = () => {
                       value={regData.password}
                       onChange={(e) => setRegData({ ...regData, password: e.target.value })}
                       placeholder="Min 6 characters"
-                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -519,7 +519,7 @@ const Login = () => {
                       value={regData.confirmPassword}
                       onChange={(e) => setRegData({ ...regData, confirmPassword: e.target.value })}
                       placeholder="Repeat password"
-                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900/90 py-2.5 pl-9 pr-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -528,7 +528,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 py-3.5 text-xs sm:text-sm font-bold text-white shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 transition-all"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 py-3.5 text-xs sm:text-sm font-bold text-white shadow-xl shadow-emerald-600/30 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 transition-all"
               >
                 {submitting ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -548,7 +548,7 @@ const Login = () => {
                     setActiveTab('login');
                     setError('');
                   }}
-                  className="font-bold text-indigo-400 hover:text-indigo-300"
+                  className="font-bold text-emerald-400 hover:text-emerald-300"
                 >
                   Sign in here
                 </button>
