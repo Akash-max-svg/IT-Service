@@ -9,6 +9,7 @@ import { normalizeRole } from './utils/roleUtils';
 // Layout Components
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import AeroBackground from './components/AeroBackground';
 
 // Pages
 import Login from './pages/Login';
@@ -28,14 +29,11 @@ const AppLayout = () => {
   const { currentTheme } = useTheme();
 
   return (
-    <div className={`theme-${currentTheme} min-h-screen flex flex-col bg-slate-50 text-slate-900 transition-colors duration-300 relative selection:bg-amber-400 selection:text-slate-950`}>
-      {/* Background Ambient Decorative Light Orbs tailored for White & Gold */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-amber-400/10 blur-[130px]" />
-        <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-yellow-500/10 blur-[140px]" />
-        <div className="absolute -bottom-20 left-1/3 h-96 w-96 rounded-full bg-amber-300/10 blur-[120px]" />
-      </div>
+    <div className={`theme-${currentTheme} min-h-screen flex flex-col relative selection:bg-amber-400 selection:text-slate-950`}>
+      {/* Reusable Fixed AeroShards Background Layer */}
+      <AeroBackground />
 
+      {/* Dashboard UI Wrapper with relative positioning and higher z-index */}
       <div className="relative z-10 flex flex-col min-h-screen">
         <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         <div className="flex flex-1">
