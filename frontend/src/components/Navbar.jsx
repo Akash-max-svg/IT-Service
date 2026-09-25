@@ -105,13 +105,13 @@ const Navbar = ({ onToggleSidebar }) => {
     : notifications;
 
   return (
-    <header className="portal-navbar sticky top-0 z-40 flex h-16 w-full items-center justify-between px-4 sm:px-6 backdrop-blur-xl shadow-lg transition-colors duration-300">
+    <header className="portal-navbar sticky top-0 z-40 flex h-16 w-full items-center justify-between px-4 sm:px-6 backdrop-blur-xl shadow-sm transition-colors duration-300">
       {/* Brand & Mobile Hamburger */}
       <div className="flex items-center gap-4">
         <button
           onClick={onToggleSidebar}
           type="button"
-          className="rounded-xl p-2 text-slate-400 hover:bg-slate-800/80 hover:text-white lg:hidden transition-colors"
+          className="rounded-xl p-2 text-slate-600 hover:bg-amber-50 hover:text-slate-900 lg:hidden transition-colors"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -119,61 +119,25 @@ const Navbar = ({ onToggleSidebar }) => {
         </button>
 
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate('/')}>
-          <div
-            className={`relative flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg transition-transform duration-200 group-hover:scale-105 ${
-              currentTheme === 'admin'
-                ? 'bg-gradient-to-br from-purple-500 via-fuchsia-600 to-indigo-600 shadow-purple-500/30'
-                : currentTheme === 'agent'
-                ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 shadow-emerald-500/30'
-                : 'bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 shadow-sky-500/30'
-            }`}
-          >
-            <span className="font-mono font-bold text-sm tracking-wider">IT</span>
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 via-yellow-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/25 transition-transform duration-200 group-hover:scale-105">
+            <span className="font-mono font-extrabold text-sm tracking-wider">IT</span>
             <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-              <span
-                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  currentTheme === 'admin'
-                    ? 'bg-purple-400'
-                    : currentTheme === 'agent'
-                    ? 'bg-emerald-400'
-                    : 'bg-sky-400'
-                }`}
-              />
-              <span
-                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                  currentTheme === 'admin'
-                    ? 'bg-purple-500'
-                    : currentTheme === 'agent'
-                    ? 'bg-emerald-500'
-                    : 'bg-sky-500'
-                }`}
-              />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
             </span>
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-extrabold tracking-tight text-white transition-colors">
-                ServiceDesk<span className={currentTheme === 'admin' ? 'text-purple-400' : currentTheme === 'agent' ? 'text-emerald-400' : 'text-sky-400'}>Pro</span>
+              <span className="text-base font-extrabold tracking-tight text-slate-900 transition-colors">
+                ServiceDesk<span className="text-amber-600">Pro</span>
               </span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
-                  currentTheme === 'admin'
-                    ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                    : currentTheme === 'agent'
-                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                    : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
-                }`}
-              >
+              <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-amber-300 bg-amber-50 text-amber-900">
                 {currentTheme === 'admin' ? 'Admin Portal' : currentTheme === 'agent' ? 'Agent Console' : 'Employee Desk'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:flex items-center gap-1.5">
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  currentTheme === 'admin' ? 'bg-purple-400' : currentTheme === 'agent' ? 'bg-emerald-400' : 'bg-sky-400'
-                }`}
-              />
+            <p className="text-[11px] text-slate-500 hidden sm:flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               <span>{themeConfig.name}</span>
             </p>
           </div>
@@ -182,20 +146,14 @@ const Navbar = ({ onToggleSidebar }) => {
 
       {/* Right Controls: Locked Position Badge, Notifications & User Menu */}
       <div className="flex items-center gap-2.5 sm:gap-3">
-        {/* Strictly Locked Login Position Indicator (User cannot shift one-to-one) */}
+        {/* Strictly Locked Login Position Indicator */}
         <div
-          className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-bold shadow-inner ${
-            userRole === 'Admin'
-              ? 'border-purple-500/40 bg-purple-950/50 text-purple-200'
-              : userRole === 'Agent'
-              ? 'border-emerald-500/40 bg-emerald-950/50 text-emerald-200'
-              : 'border-sky-500/40 bg-sky-950/50 text-sky-200'
-          }`}
+          className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-950 shadow-sm"
           title="Login position strictly locked to your authenticated role. Shifting between positions is disabled."
         >
-          {getRoleIcon(userRole)}
+          <Shield className="h-3.5 w-3.5 text-amber-600" />
           <span>{getRoleDisplayName(userRole)}</span>
-          <span className="hidden sm:inline-flex items-center gap-1 text-[10px] opacity-80 font-mono bg-black/30 px-1.5 py-0.5 rounded">
+          <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono bg-amber-200/60 text-amber-900 px-1.5 py-0.5 rounded">
             <Lock className="h-2.5 w-2.5" />
             <span>Locked</span>
           </span>

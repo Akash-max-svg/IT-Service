@@ -28,30 +28,12 @@ const AppLayout = () => {
   const { currentTheme } = useTheme();
 
   return (
-    <div className={`theme-${currentTheme} min-h-screen flex flex-col transition-colors duration-300 relative selection:bg-indigo-500 selection:text-white`}>
-      {/* Background Ambient Decorative Light Orbs tailored for each theme */}
+    <div className={`theme-${currentTheme} min-h-screen flex flex-col bg-slate-50 text-slate-900 transition-colors duration-300 relative selection:bg-amber-400 selection:text-slate-950`}>
+      {/* Background Ambient Decorative Light Orbs tailored for White & Gold */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        {currentTheme === 'admin' && (
-          <>
-            <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-purple-600/10 blur-[120px]" />
-            <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-pink-600/10 blur-[130px]" />
-            <div className="absolute -bottom-20 left-1/3 h-96 w-96 rounded-full bg-indigo-600/10 blur-[140px]" />
-          </>
-        )}
-        {currentTheme === 'employee' && (
-          <>
-            <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-sky-500/12 blur-[120px]" />
-            <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-blue-600/12 blur-[130px]" />
-            <div className="absolute -bottom-20 left-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-[140px]" />
-          </>
-        )}
-        {currentTheme === 'agent' && (
-          <>
-            <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-emerald-500/12 blur-[120px]" />
-            <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-teal-500/12 blur-[130px]" />
-            <div className="absolute -bottom-20 left-1/3 h-96 w-96 rounded-full bg-cyan-500/10 blur-[140px]" />
-          </>
-        )}
+        <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-amber-400/10 blur-[130px]" />
+        <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-yellow-500/10 blur-[140px]" />
+        <div className="absolute -bottom-20 left-1/3 h-96 w-96 rounded-full bg-amber-300/10 blur-[120px]" />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">

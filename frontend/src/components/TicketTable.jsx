@@ -10,10 +10,10 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="flex h-64 items-center justify-center bg-white rounded-2xl">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent shadow-lg shadow-indigo-500/20" />
-          <span className="text-xs font-semibold text-slate-400">Loading incident queue...</span>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent shadow-lg shadow-amber-500/20" />
+          <span className="text-xs font-semibold text-slate-500">Loading incident queue...</span>
         </div>
       </div>
     );
@@ -21,12 +21,12 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
 
   if (!tickets || tickets.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="rounded-2xl bg-slate-800/80 p-5 text-slate-500 mb-3 border border-slate-700/60 shadow-inner">
-          <Inbox className="h-8 w-8 text-indigo-400" />
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl">
+        <div className="rounded-2xl bg-amber-50 p-5 text-amber-600 mb-3 border border-amber-200 shadow-sm">
+          <Inbox className="h-8 w-8 text-amber-500" />
         </div>
-        <h4 className="text-base font-bold text-white">No incidents found</h4>
-        <p className="text-xs text-slate-400 mt-1 max-w-sm leading-relaxed">
+        <h4 className="text-base font-bold text-slate-800">No incidents found</h4>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm leading-relaxed">
           No tickets match the selected filters or there are no items in this queue yet.
         </p>
       </div>
@@ -34,41 +34,41 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-xs text-slate-300">
-        <thead className="bg-slate-900/90 uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono text-[11px]">
+    <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <table className="w-full text-left text-xs text-slate-700">
+        <thead className="bg-amber-50/70 uppercase tracking-wider text-slate-700 border-b border-amber-200/80 font-mono text-[11px]">
           <tr>
-            <th scope="col" className="px-5 py-4 font-bold">Ticket ID</th>
-            <th scope="col" className="px-5 py-4 font-bold">Summary & Category</th>
-            <th scope="col" className="px-4 py-4 font-bold">Priority</th>
-            <th scope="col" className="px-4 py-4 font-bold">Status</th>
-            <th scope="col" className="px-4 py-4 font-bold">Assignee</th>
-            <th scope="col" className="px-4 py-4 font-bold">SLA Target</th>
-            <th scope="col" className="px-4 py-4 font-bold">Logged</th>
-            <th scope="col" className="px-5 py-4 font-bold text-right">Action</th>
+            <th scope="col" className="px-5 py-4 font-bold text-slate-800">Ticket ID</th>
+            <th scope="col" className="px-5 py-4 font-bold text-slate-800">Summary & Category</th>
+            <th scope="col" className="px-4 py-4 font-bold text-slate-800">Priority</th>
+            <th scope="col" className="px-4 py-4 font-bold text-slate-800">Status</th>
+            <th scope="col" className="px-4 py-4 font-bold text-slate-800">Assignee</th>
+            <th scope="col" className="px-4 py-4 font-bold text-slate-800">SLA Target</th>
+            <th scope="col" className="px-4 py-4 font-bold text-slate-800">Logged</th>
+            <th scope="col" className="px-5 py-4 font-bold text-right text-slate-800">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60">
+        <tbody className="divide-y divide-slate-100">
           {tickets.map((ticket) => (
             <tr
               key={ticket._id}
               onClick={() => navigate(`/tickets/${ticket._id}`)}
-              className="cursor-pointer hover:bg-slate-800/50 transition-all duration-150 group"
+              className="cursor-pointer hover:bg-amber-50/40 transition-all duration-150 group"
             >
               {/* Ticket ID */}
               <td className="px-5 py-4 whitespace-nowrap">
-                <span className="font-mono text-xs font-bold text-indigo-400 group-hover:text-indigo-300">
+                <span className="font-mono text-xs font-bold text-amber-600 group-hover:text-amber-700">
                   {ticket.ticketNumber}
                 </span>
               </td>
 
               {/* Title & Category */}
               <td className="px-5 py-4 max-w-xs sm:max-w-md">
-                <div className="font-semibold text-white truncate text-xs group-hover:text-indigo-200 transition-colors">
+                <div className="font-semibold text-slate-900 truncate text-xs group-hover:text-amber-700 transition-colors">
                   {ticket.title}
                 </div>
-                <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                  <span className="rounded bg-slate-800 px-2 py-0.5 border border-slate-700/60 font-medium">
+                <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
+                  <span className="rounded bg-slate-100 px-2 py-0.5 border border-slate-200 font-medium text-slate-700">
                     {ticket.category}
                   </span>
                   {ticket.subcategory && (
@@ -77,8 +77,8 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
                     </span>
                   )}
                   {ticket.attachments?.length > 0 && (
-                    <span className="inline-flex items-center gap-0.5 text-slate-400 font-mono">
-                      <Paperclip className="h-3 w-3 text-indigo-400" />
+                    <span className="inline-flex items-center gap-0.5 text-slate-500 font-mono">
+                      <Paperclip className="h-3 w-3 text-amber-500" />
                       {ticket.attachments.length}
                     </span>
                   )}
@@ -99,15 +99,15 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
               <td className="px-4 py-4 whitespace-nowrap">
                 {ticket.assignedTo ? (
                   <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-[10px] font-bold text-white shadow-sm">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 text-[10px] font-bold text-white shadow-sm">
                       {ticket.assignedTo.name?.charAt(0)}
                     </div>
-                    <span className="truncate max-w-[110px] font-medium text-slate-200">
+                    <span className="truncate max-w-[110px] font-medium text-slate-800">
                       {ticket.assignedTo.name}
                     </span>
                   </div>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded bg-slate-800/80 px-2 py-0.5 text-[10px] font-medium text-slate-500 border border-slate-700/40 italic">
+                  <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 border border-amber-200 italic">
                     Unassigned
                   </span>
                 )}
@@ -119,7 +119,7 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
               </td>
 
               {/* Logged Date */}
-              <td className="px-4 py-4 whitespace-nowrap text-[11px] text-slate-400 font-mono">
+              <td className="px-4 py-4 whitespace-nowrap text-[11px] text-slate-500 font-mono">
                 {new Date(ticket.createdAt).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
@@ -134,9 +134,9 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
                     e.stopPropagation();
                     navigate(`/tickets/${ticket._id}`);
                   }}
-                  className="inline-flex items-center gap-1 rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-indigo-600 hover:text-white transition-all shadow-sm group-hover:border-indigo-500/40 border border-slate-700/60"
+                  className="inline-flex items-center gap-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 text-xs transition-all shadow-sm"
                 >
-                  <span>View</span>
+                  <span>View Problem</span>
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </button>
               </td>
@@ -149,3 +149,4 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
 };
 
 export default TicketTable;
+

@@ -9,10 +9,10 @@ export const THEME_CONFIGS = {
     id: 'admin',
     name: 'Executive Admin',
     shortName: 'Admin',
-    accentColor: '#a855f7',
-    gradient: 'from-purple-600 via-fuchsia-600 to-indigo-600',
-    badgeClass: 'border-purple-500/40 bg-purple-500/15 text-purple-300',
-    description: 'Royal Obsidian & Deep Velvet Violet Command Center',
+    accentColor: '#d97706',
+    gradient: 'from-amber-500 via-yellow-500 to-amber-600',
+    badgeClass: 'border-amber-300 bg-amber-50 text-amber-900',
+    description: 'Crisp White & Royal Champagne Gold Command Center',
     iconName: 'Shield',
     positionTitle: 'Administrator Console',
   },
@@ -20,10 +20,10 @@ export const THEME_CONFIGS = {
     id: 'employee',
     name: 'Employee Portal',
     shortName: 'Employee',
-    accentColor: '#0ea5e9',
-    gradient: 'from-sky-600 via-blue-600 to-indigo-600',
-    badgeClass: 'border-sky-500/40 bg-sky-500/15 text-sky-300',
-    description: 'Modern Oceanic Midnight & Electric Sapphire Workspace',
+    accentColor: '#f59e0b',
+    gradient: 'from-amber-400 via-yellow-500 to-amber-500',
+    badgeClass: 'border-amber-300 bg-amber-50 text-amber-900',
+    description: 'Crisp White & Radiant Sunlight Gold Workspace',
     iconName: 'Briefcase',
     positionTitle: 'Employee Service Desk',
   },
@@ -31,10 +31,10 @@ export const THEME_CONFIGS = {
     id: 'agent',
     name: 'Agent Triage',
     shortName: 'Agent',
-    accentColor: '#10b981',
-    gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
-    badgeClass: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300',
-    description: 'Tactical Cyber Matrix & Emerald Aurora Operations',
+    accentColor: '#b45309',
+    gradient: 'from-amber-500 via-amber-600 to-yellow-600',
+    badgeClass: 'border-amber-300 bg-amber-50 text-amber-900',
+    description: 'Crisp White & Tactical Amber Gold Operations',
     iconName: 'Headphones',
     positionTitle: 'Support Specialist Console',
   },
@@ -43,7 +43,7 @@ export const THEME_CONFIGS = {
 export const ThemeProvider = ({ children }) => {
   const { user } = useAuth();
 
-  // Position is strictly locked to authenticated user role - cannot shift one-to-one
+  // Position is strictly locked to authenticated user role
   const currentTheme = useMemo(() => {
     const role = normalizeRole(user?.role);
     if (role === 'Admin') return 'admin';

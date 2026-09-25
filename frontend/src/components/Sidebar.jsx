@@ -76,18 +76,12 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   // Role-tailored dynamic accent classes
   const getActiveLinkClass = (isActive) => {
-    if (!isActive) return 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200';
-    if (currentTheme === 'admin') {
-      return 'bg-purple-500/20 text-purple-200 font-bold border border-purple-500/40 shadow-sm shadow-purple-950/60';
-    }
-    if (currentTheme === 'agent') {
-      return 'bg-emerald-500/20 text-emerald-200 font-bold border border-emerald-500/40 shadow-sm shadow-emerald-950/60';
-    }
-    return 'bg-sky-500/20 text-sky-200 font-bold border border-sky-500/40 shadow-sm shadow-sky-950/60';
+    if (!isActive) return 'text-slate-600 hover:bg-amber-50 hover:text-slate-950 font-medium';
+    return 'bg-amber-100 text-amber-950 font-bold border border-amber-300 shadow-sm';
   };
 
   const getCtaGradient = () => {
-    return 'bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 shadow-sky-600/30 hover:shadow-sky-600/50';
+    return 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 font-bold shadow-md shadow-amber-500/25 hover:shadow-amber-500/40';
   };
 
   return (
@@ -170,15 +164,15 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer Support Info */}
-        <div className="glass-card rounded-2xl p-3.5 border shadow-md">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
+        <div className="rounded-2xl p-3.5 border border-amber-200/80 bg-gradient-to-br from-amber-50/80 to-amber-100/40 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600">
               <PhoneCall className="h-3.5 w-3.5" />
             </div>
             <span>Emergency IT Line</span>
           </div>
-          <p className="mt-1.5 text-[11px] text-slate-400 leading-relaxed">
-            Critical outage? Call <span className="font-mono font-bold text-sky-400">ext. 4357</span> or page standby team.
+          <p className="mt-1.5 text-[11px] text-slate-600 leading-relaxed">
+            Critical outage? Call <span className="font-mono font-bold text-amber-700">ext. 4357</span> or page standby team.
           </p>
         </div>
       </aside>
