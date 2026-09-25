@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import * as THREE from 'three';
+import VantaNet from 'vanta/dist/vanta.net.min';
 import useAuth from '../hooks/useAuth';
 import {
   User,
@@ -34,6 +36,48 @@ const Register = () => {
 
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  const vantaRef = useRef(null);
+  const effectRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.THREE = THREE;
+    }
+
+    const netInit = VantaNet.default || VantaNet;
+    if (!effectRef.current && vantaRef.current) {
+      try {
+        effectRef.current = netInit({
+          el: vantaRef.current,
+          THREE: THREE,
+          mouseControls: true,
+          touchControls: true,
+          gyroControls: false,
+          minHeight: 200.0,
+          minWidth: 200.0,
+          scale: 1.0,
+          scaleMobile: 1.0,
+          color: 0x3fe8d4,
+          backgroundColor: 0x020617,
+          backgroundAlpha: 0.35,
+          points: 12.0,
+          maxDistance: 22.0,
+          spacing: 16.0,
+          showDots: true,
+        });
+      } catch (err) {
+        console.error('Failed to init Vanta on Register:', err);
+      }
+    }
+
+    return () => {
+      if (effectRef.current) {
+        effectRef.current.destroy();
+        effectRef.current = null;
+      }
+    };
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -83,13 +127,20 @@ const Register = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-slate-950 p-4 sm:p-6 lg:p-8 overflow-hidden">
-      {/* Decorative ambient blurred glow spheres */}
-      <div className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-indigo-600/15 blur-[130px] pointer-events-none" />
-      <div className="absolute top-1/2 -right-40 h-[520px] w-[520px] rounded-full bg-purple-600/15 blur-[130px] pointer-events-none" />
-      <div className="absolute -bottom-40 left-1/3 h-[420px] w-[420px] rounded-full bg-blue-600/10 blur-[110px] pointer-events-none" />
+    <div
+      ref={vantaRef}
+      className="signup-page relative flex min-h-screen items-center justify-center bg-slate-950 p-4 sm:p-6 lg:p-8 overflow-hidden"
+    >
+      {/* Background image layer beneath Vanta network */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none z-0"
+        style={{
+          backgroundImage:
+            "url('https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1920&q=80')",
+        }}
+      />
 
-      <div className="relative w-full max-w-xl z-10 animate-in fade-in duration-300">
+      <div className="relative w-full max-w-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
         <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-slate-800 shadow-2xl backdrop-blur-2xl">
           <div className="text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-600/30 scale-105">
