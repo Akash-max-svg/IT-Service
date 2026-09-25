@@ -9,31 +9,227 @@
     @apply bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-indigo-500 selection:text-white;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     background-color: #080c14;
-    background-image: 
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.12), transparent),
-      radial-gradient(circle at 100% 0%, rgba(168, 85, 247, 0.08), transparent 40%),
-      radial-gradient(circle at 0% 100%, rgba(14, 165, 233, 0.06), transparent 40%);
-    background-attachment: fixed;
   }
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.4);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(129, 140, 248, 0.6);
+/* ==========================================================================
+   ROLE-SPECIFIC PORTAL THEMES (Admin, Employee, Agent)
+   Login and SignUp pages remain completely unaffected (independent canvas).
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. ADMIN THEME: Royal Obsidian & Deep Velvet Violet Command Center
+   -------------------------------------------------------------------------- */
+.theme-admin {
+  background-color: #090514 !important;
+  background-image: 
+    radial-gradient(circle at 18% 10%, rgba(147, 51, 234, 0.22) 0%, transparent 45%),
+    radial-gradient(circle at 82% 16%, rgba(236, 72, 153, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 50% 80%, rgba(99, 102, 241, 0.14) 0%, transparent 50%),
+    radial-gradient(rgba(168, 85, 247, 0.08) 1px, transparent 1px) !important;
+  background-size: auto, auto, auto, 28px 28px !important;
+  background-attachment: fixed !important;
+  color: #f3e8ff;
 }
 
-/* Glassmorphism & Enterprise Card Tokens */
+.theme-admin ::selection {
+  background-color: #9333ea;
+  color: #ffffff;
+}
+
+.theme-admin .portal-navbar {
+  background: rgba(13, 8, 28, 0.85);
+  border-bottom: 1px solid rgba(168, 85, 247, 0.25);
+  box-shadow: 0 10px 30px -10px rgba(147, 51, 234, 0.2);
+}
+
+.theme-admin .portal-sidebar {
+  background: rgba(11, 7, 24, 0.95);
+  border-right: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.theme-admin .glass-panel {
+  background: rgba(18, 11, 38, 0.78);
+  border: 1px solid rgba(168, 85, 247, 0.22);
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), 0 0 25px -5px rgba(147, 51, 234, 0.15);
+}
+
+.theme-admin .glass-card {
+  background: rgba(21, 13, 44, 0.65);
+  border: 1px solid rgba(168, 85, 247, 0.18);
+  box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-admin .glass-card:hover {
+  border-color: rgba(192, 132, 252, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.55), 0 0 25px -2px rgba(168, 85, 247, 0.3);
+}
+
+.theme-admin .glass-input {
+  background: rgba(22, 14, 46, 0.75);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.theme-admin .glass-input:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
+}
+
+.theme-admin .role-accent-gradient {
+  background: linear-gradient(135deg, #9333ea 0%, #c026d3 50%, #4f46e5 100%);
+}
+
+.theme-admin .nav-active-pill {
+  background: rgba(147, 51, 234, 0.2);
+  color: #e9d5ff;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   2. EMPLOYEE THEME: Modern Corporate Oceanic Midnight & Electric Sapphire
+   -------------------------------------------------------------------------- */
+.theme-employee {
+  background-color: #030a16 !important;
+  background-image: 
+    radial-gradient(circle at 15% 12%, rgba(14, 165, 233, 0.22) 0%, transparent 45%),
+    radial-gradient(circle at 85% 18%, rgba(37, 99, 235, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(99, 102, 241, 0.14) 0%, transparent 50%),
+    radial-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px) !important;
+  background-size: auto, auto, auto, 28px 28px !important;
+  background-attachment: fixed !important;
+  color: #e0f2fe;
+}
+
+.theme-employee ::selection {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+.theme-employee .portal-navbar {
+  background: rgba(4, 16, 36, 0.85);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+  box-shadow: 0 10px 30px -10px rgba(14, 165, 233, 0.2);
+}
+
+.theme-employee .portal-sidebar {
+  background: rgba(3, 13, 30, 0.95);
+  border-right: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.theme-employee .glass-panel {
+  background: rgba(6, 22, 48, 0.78);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), 0 0 25px -5px rgba(14, 165, 233, 0.15);
+}
+
+.theme-employee .glass-card {
+  background: rgba(8, 28, 60, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-employee .glass-card:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.55), 0 0 25px -2px rgba(14, 165, 233, 0.3);
+}
+
+.theme-employee .glass-input {
+  background: rgba(7, 26, 56, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.theme-employee .glass-input:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+}
+
+.theme-employee .role-accent-gradient {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);
+}
+
+.theme-employee .nav-active-pill {
+  background: rgba(14, 165, 233, 0.2);
+  color: #bae6fd;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   3. AGENT THEME: High-Tech Tactical Matrix & Emerald Aurora Operations
+   -------------------------------------------------------------------------- */
+.theme-agent {
+  background-color: #02120e !important;
+  background-image: 
+    radial-gradient(circle at 18% 12%, rgba(16, 185, 129, 0.24) 0%, transparent 45%),
+    radial-gradient(circle at 82% 20%, rgba(20, 184, 166, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(6, 182, 212, 0.14) 0%, transparent 50%),
+    radial-gradient(rgba(16, 185, 129, 0.08) 1px, transparent 1px) !important;
+  background-size: auto, auto, auto, 28px 28px !important;
+  background-attachment: fixed !important;
+  color: #d1fae5;
+}
+
+.theme-agent ::selection {
+  background-color: #059669;
+  color: #ffffff;
+}
+
+.theme-agent .portal-navbar {
+  background: rgba(3, 24, 18, 0.85);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.2);
+}
+
+.theme-agent .portal-sidebar {
+  background: rgba(2, 20, 15, 0.95);
+  border-right: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.theme-agent .glass-panel {
+  background: rgba(4, 32, 25, 0.78);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), 0 0 25px -5px rgba(16, 185, 129, 0.15);
+}
+
+.theme-agent .glass-card {
+  background: rgba(5, 38, 30, 0.65);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-agent .glass-card:hover {
+  border-color: rgba(52, 211, 153, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.55), 0 0 25px -2px rgba(16, 185, 129, 0.3);
+}
+
+.theme-agent .glass-input {
+  background: rgba(6, 36, 28, 0.75);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.theme-agent .glass-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.theme-agent .role-accent-gradient {
+  background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0891b2 100%);
+}
+
+.theme-agent .nav-active-pill {
+  background: rgba(16, 185, 129, 0.2);
+  color: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* ==========================================================================
+   DEFAULT GLASS & COMPONENT TOKENS (Fallback / Base)
+   ========================================================================== */
 .glass-panel {
   background: rgba(15, 23, 42, 0.72);
   backdrop-filter: blur(16px);
@@ -69,23 +265,20 @@
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
-/* Enterprise Gradient Borders & Glowing Highlights */
-.gradient-border-card {
-  position: relative;
-  background: #0f172a;
-  border-radius: 1rem;
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-.gradient-border-card::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(168, 85, 247, 0.2), rgba(255, 255, 255, 0.05));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(129, 140, 248, 0.6);
 }
 
 /* Subtle Shimmer Animation */
@@ -98,17 +291,17 @@
   animation: shimmer 2.5s infinite;
 }
 
-/* Slow Pulsing Dot */
+/* Ambient Pulse Glow */
 @keyframes pulse-glow {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.15); }
+  50% { opacity: 0.5; transform: scale(1.12); }
 }
 
 .animate-pulse-glow {
   animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Vanta.NET Background Layering */
+/* Vanta.NET Background Layering (Unchanged for Login/Register) */
 .signup-page canvas,
 .signup-page .vanta-canvas {
   position: absolute !important;
@@ -118,4 +311,3 @@
   z-index: 1 !important;
   pointer-events: none !important;
 }
-

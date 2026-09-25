@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import useAuth from './hooks/useAuth';
 import ProtectedRoute from './routes/ProtectedRoute';
 import { normalizeRole } from './utils/roleUtils';
@@ -24,15 +25,43 @@ import Settings from './pages/Settings';
 
 const AppLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { currentTheme } = useTheme();
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
-      <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      <div className="flex flex-1">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-          <Outlet />
-        </main>
+    <div className={`theme-${currentTheme} min-h-screen flex flex-col transition-colors duration-300 relative selection:bg-indigo-500 selection:text-white`}>
+      {/* Background Ambient Decorative Light Orbs tailored for each theme */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        {currentTheme === 'admin' && (
+          <>
+            <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-purple-600/10 blur-[120px]" />
+            <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-pink-600/10 blur-[130px]" />
+            <div className="absolute -bottom-20 left-1/3 h-96 w-96 rounded-full bg-indigo-600/10 blur-[140px]" />
+          </>
+        )}
+        {currentTheme === 'employee' && (
+          <>
+            <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-sky-500/12 blur-[120px]" />
+            <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-blue-600/12 blur-[130px]" />
+            <div className="absolute -bottom-20 left-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-[140px]" />
+          </>
+        )}
+        {currentTheme === 'agent' && (
+          <>
+            <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-emerald-500/12 blur-[120px]" />
+            <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-teal-500/12 blur-[130px]" />
+            <div className="absolute -bottom-20 left-1/3 h-96 w-96 rounded-full bg-cyan-500/10 blur-[140px]" />
+          </>
+        )}
+      </div>
+
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <div className="flex flex-1">
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -53,62 +82,64 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          {/* Public Authentication Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+        <ThemeProvider>
+          <Routes>
+            {/* Public Authentication Routes - Untouched Vanta/Canvas UI */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* Protected Application Routes */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/" element={<RootRedirect />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/create-ticket" element={<CreateTicket />} />
-            <Route path="/my-tickets" element={<MyTickets />} />
-            <Route path="/tickets/:id" element={<TicketDetails />} />
+            {/* Protected Application Routes */}
             <Route
-              path="/agent"
               element={
-                <ProtectedRoute allowedRoles={['Agent', 'Admin']}>
-                  <AgentDashboard />
+                <ProtectedRoute>
+                  <AppLayout />
                 </ProtectedRoute>
               }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute allowedRoles={['Admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute allowedRoles={['Admin']}>
-                  <Users />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute allowedRoles={['Agent', 'Admin']}>
-                  <Reports />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
+            >
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/create-ticket" element={<CreateTicket />} />
+              <Route path="/my-tickets" element={<MyTickets />} />
+              <Route path="/tickets/:id" element={<TicketDetails />} />
+              <Route
+                path="/agent"
+                element={
+                  <ProtectedRoute allowedRoles={['Agent', 'Admin']}>
+                    <AgentDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={['Admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute allowedRoles={['Admin']}>
+                    <Users />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute allowedRoles={['Agent', 'Admin']}>
+                    <Reports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Catch-all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ThemeProvider>
       </Router>
     </AuthProvider>
   );

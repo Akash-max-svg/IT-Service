@@ -121,8 +121,9 @@ const AgentDashboard = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-950 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/80 via-[#06261d] to-[#02130e] p-6 sm:p-8 backdrop-blur-2xl shadow-2xl">
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute right-40 -bottom-20 h-64 w-64 rounded-full bg-teal-500/15 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="space-y-2">
@@ -141,7 +142,7 @@ const AgentDashboard = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/create-ticket')}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3 text-xs font-bold text-white shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-5 py-3 text-xs font-bold text-white shadow-xl shadow-emerald-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
               <Zap className="h-4 w-4" /> Log Incoming Request
             </button>
@@ -156,13 +157,13 @@ const AgentDashboard = () => {
           onClick={() => setActiveQueueTab('my-assigned')}
           className={`glass-card cursor-pointer rounded-2xl p-5 border transition-all duration-200 ${
             activeQueueTab === 'my-assigned'
-              ? 'border-indigo-500 bg-indigo-950/30 ring-2 ring-indigo-500/40 shadow-indigo-500/10'
-              : 'border-slate-800 hover:border-indigo-500/30'
+              ? 'border-emerald-500 bg-emerald-950/40 ring-2 ring-emerald-500/40 shadow-emerald-500/20'
+              : 'border-slate-800 hover:border-emerald-500/30'
           }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">My Assigned</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
               <UserCheck className="h-5 w-5" />
             </div>
           </div>
@@ -248,7 +249,7 @@ const AgentDashboard = () => {
               onClick={() => setActiveQueueTab('my-assigned')}
               className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
                 activeQueueTab === 'my-assigned'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/40'
                   : 'bg-slate-800/80 text-slate-400 hover:text-white'
               }`}
             >

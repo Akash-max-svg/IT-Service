@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import {
   LayoutDashboard,
   PlusCircle,
@@ -11,7 +12,6 @@ import {
   BarChart3,
   Settings,
   X,
-  LifeBuoy,
   PhoneCall,
   Sparkles,
 } from 'lucide-react';
@@ -19,6 +19,7 @@ import { normalizeRole } from '../utils/roleUtils';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const { currentTheme, themeConfig } = useTheme();
   const navigate = useNavigate();
 
   const role = normalizeRole(user?.role);
@@ -27,7 +28,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   if (role === 'Admin') {
     sections.push({
-      title: 'Governance & Analytics',
+      title: 'Executive & Governance',
       links: [
         { to: '/admin', label: 'Executive Dashboard', icon: ShieldCheck },
         { to: '/reports', label: 'Reports & SLA Analytics', icon: BarChart3 },
@@ -73,6 +74,28 @@ const Sidebar = ({ isOpen, onClose }) => {
     });
   }
 
+  // Role-tailored dynamic accent classes
+  const getActiveLinkClass = (isActive) => {
+    if (!isActive) return 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200';
+    if (currentTheme === 'admin') {
+      return 'bg-purple-500/20 text-purple-200 font-bold border border-purple-500/40 shadow-sm shadow-purple-950/60';
+    }
+    if (currentTheme === 'agent') {
+      return 'bg-emerald-500/20 text-emerald-200 font-bold border border-emerald-500/40 shadow-sm shadow-emerald-950/60';
+    }
+    return 'bg-sky-500/20 text-sky-200 font-bold border border-sky-500/40 shadow-sm shadow-sky-950/60';
+  };
+
+  const getCtaGradient = () => {
+    if (currentTheme === 'admin') {
+      return 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 shadow-purple-600/30 hover:shadow-purple-600/50';
+    }
+    if (currentTheme === 'agent') {
+      return 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 shadow-emerald-600/30 hover:shadow-emerald-600/50';
+    }
+    return 'bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 shadow-sky-600/30 hover:shadow-sky-600/50';
+  };
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -85,7 +108,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       {/* Sidebar Panel */}
       <aside
-        className={`fixed top-16 bottom-0 left-0 z-40 flex w-64 flex-col justify-between border-r border-slate-800/80 bg-slate-950/95 p-4 transition-transform duration-250 ease-in-out lg:static lg:translate-x-0 ${
+        className={`portal-sidebar fixed top-16 bottom-0 left-0 z-40 flex w-64 flex-col justify-between p-4 transition-transform duration-250 ease-in-out lg:static lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -110,7 +133,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 navigate('/create-ticket');
                 if (onClose) onClose();
               }}
-              className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 transition-all duration-200 active:scale-[0.98]"
+              className={`group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-xs font-bold text-white shadow-lg transition-all duration-200 active:scale-[0.98] ${getCtaGradient()}`}
             >
               <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               <PlusCircle className="h-4 w-4" />
@@ -134,11 +157,9 @@ const Sidebar = ({ isOpen, onClose }) => {
                         to={item.to}
                         onClick={onClose}
                         className={({ isActive }) =>
-                          `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${
+                          `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${getActiveLinkClass(
                             isActive
-                              ? 'bg-indigo-600/15 text-indigo-300 font-semibold border border-indigo-500/30 shadow-sm shadow-indigo-950/50'
-                              : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-                          }`
+                          )}`
                         }
                       >
                         <Icon className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
@@ -153,7 +174,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer Support Info */}
-        <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-900/90 to-slate-950 p-3.5 shadow-md">
+        <div className="glass-card rounded-2xl p-3.5 border shadow-md">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
             <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
               <PhoneCall className="h-3.5 w-3.5" />
@@ -161,7 +182,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <span>Emergency IT Line</span>
           </div>
           <p className="mt-1.5 text-[11px] text-slate-400 leading-relaxed">
-            Critical outage? Call <span className="font-mono font-bold text-indigo-400">ext. 4357</span> or page standby team.
+            Critical outage? Call <span className="font-mono font-bold text-sky-400">ext. 4357</span> or page standby team.
           </p>
         </div>
       </aside>

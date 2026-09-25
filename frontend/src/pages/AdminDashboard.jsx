@@ -264,13 +264,14 @@ const AdminDashboard = () => {
       )}
 
       {/* Executive Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-indigo-500/25 bg-gradient-to-r from-indigo-950/70 via-slate-900 to-slate-950 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-r from-purple-950/80 via-[#190e2f] to-[#090514] p-6 sm:p-8 backdrop-blur-2xl shadow-2xl">
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-purple-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute right-40 -bottom-20 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/15 px-3 py-1 text-xs font-bold text-indigo-300 border border-indigo-500/30">
-              <ShieldCheck className="h-3.5 w-3.5 text-indigo-400" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-purple-500/15 px-3 py-1 text-xs font-bold text-purple-300 border border-purple-500/30">
+              <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
               <span>Global IT Command & Governance</span>
             </div>
             <h1 className="text-2xl font-extrabold text-white sm:text-3xl tracking-tight">
@@ -285,22 +286,22 @@ const AdminDashboard = () => {
             <button
               onClick={() => loadDashboardData(true)}
               disabled={refreshing}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-700/80 bg-slate-800/80 px-4 py-3 text-xs font-bold text-slate-200 hover:bg-slate-700/80 shadow-md transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl border border-purple-500/30 bg-purple-950/40 px-4 py-3 text-xs font-bold text-purple-200 hover:bg-purple-900/40 shadow-md transition-colors disabled:opacity-50"
               title="Refresh Queue"
             >
-              <RefreshCw className={`h-4 w-4 text-indigo-400 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 text-purple-400 ${refreshing ? 'animate-spin' : ''}`} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
             <button
               onClick={() => navigate('/users')}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-700/80 bg-slate-800/80 px-4 py-3 text-xs font-bold text-slate-200 hover:bg-slate-700/80 shadow-md transition-colors"
+              className="inline-flex items-center gap-2 rounded-2xl border border-purple-500/30 bg-purple-950/40 px-4 py-3 text-xs font-bold text-purple-200 hover:bg-purple-900/40 shadow-md transition-colors"
             >
-              <Users className="h-4 w-4 text-indigo-400" />
+              <Users className="h-4 w-4 text-purple-400" />
               <span>Roster Management</span>
             </button>
             <button
               onClick={() => navigate('/reports')}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-700/80 bg-slate-800/80 px-4 py-3 text-xs font-bold text-slate-200 hover:bg-slate-700/80 shadow-md transition-colors"
+              className="inline-flex items-center gap-2 rounded-2xl border border-purple-500/30 bg-purple-950/40 px-4 py-3 text-xs font-bold text-purple-200 hover:bg-purple-900/40 shadow-md transition-colors"
             >
               <TrendingUp className="h-4 w-4 text-emerald-400" />
               <span>SLA Reports</span>
@@ -380,10 +381,10 @@ const AdminDashboard = () => {
       {/* ALL SUBMITTED TICKETS & AGENT ASSIGNMENT SECTION */}
       <div id="incident-queue-section" className="glass-panel rounded-3xl border border-slate-800/80 shadow-2xl p-6 space-y-6">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-purple-900/30 pb-5">
           <div>
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+              <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-400">
                 <Inbox className="h-5 w-5" />
               </div>
               <div>
@@ -391,7 +392,7 @@ const AdminDashboard = () => {
                   <h2 className="text-lg font-bold text-white tracking-tight">
                     All Employee Submitted Incidents
                   </h2>
-                  <span className="rounded-full bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-0.5 text-xs font-bold font-mono text-indigo-300">
+                  <span className="rounded-full bg-purple-500/15 border border-purple-500/30 px-2.5 py-0.5 text-xs font-bold font-mono text-purple-300">
                     {filteredTickets.length} / {tickets.length}
                   </span>
                 </div>
@@ -417,13 +418,13 @@ const AdminDashboard = () => {
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-400" />
             <input
               type="text"
               placeholder="Search by ticket #, employee, title, department, category..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl bg-slate-900/90 border border-slate-800 pl-10 pr-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
+              className="w-full rounded-xl bg-slate-900/90 border border-slate-800 pl-10 pr-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors"
             />
             {searchQuery && (
               <button
@@ -453,7 +454,7 @@ const AdminDashboard = () => {
                   onClick={() => setStatusFilter(tab.id)}
                   className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${
                     statusFilter === tab.id
-                      ? 'bg-indigo-600 text-white shadow-sm'
+                      ? 'bg-purple-600 text-white shadow-sm font-bold shadow-purple-900/50'
                       : 'hover:text-slate-200 hover:bg-slate-800/60'
                   }`}
                 >
@@ -542,7 +543,7 @@ const AdminDashboard = () => {
                           <button
                             type="button"
                             onClick={() => navigate(`/tickets/${ticket._id}`)}
-                            className="font-mono text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline transition-colors flex items-center gap-1"
+                            className="font-mono text-xs font-bold text-purple-400 hover:text-purple-300 hover:underline transition-colors flex items-center gap-1"
                           >
                             <span>{ticket.ticketNumber}</span>
                           </button>

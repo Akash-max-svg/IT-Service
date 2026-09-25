@@ -71,14 +71,14 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
       {/* Hero Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/70 via-slate-900 to-slate-950 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
-        <div className="absolute right-40 -bottom-20 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl border border-sky-500/30 bg-gradient-to-br from-sky-950/80 via-[#071933] to-[#030917] p-6 sm:p-8 backdrop-blur-2xl shadow-2xl">
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute right-40 -bottom-20 h-64 w-64 rounded-full bg-blue-600/15 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/15 px-3 py-1 text-xs font-bold text-indigo-300 border border-indigo-500/30">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300 border border-sky-500/30">
+              <Sparkles className="h-3.5 w-3.5 text-sky-400" />
               <span>{user?.departmentName || 'Corporate'} Service Portal</span>
             </div>
             <h1 className="text-2xl font-extrabold text-white sm:text-3xl tracking-tight">
@@ -92,16 +92,16 @@ const Dashboard = () => {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => navigate('/create-ticket')}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3 text-xs font-bold text-white shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 px-5 py-3 text-xs font-bold text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-600/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
               <PlusCircle className="h-4 w-4" />
               <span>Submit IT Ticket</span>
             </button>
             <button
               onClick={() => navigate('/my-tickets')}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-700/80 bg-slate-800/80 px-4 py-3 text-xs font-semibold text-slate-200 hover:bg-slate-700/80 transition-colors shadow-md"
+              className="inline-flex items-center gap-2 rounded-2xl border border-sky-500/30 bg-sky-950/40 px-4 py-3 text-xs font-semibold text-sky-200 hover:bg-sky-900/40 transition-colors shadow-md"
             >
-              <Inbox className="h-4 w-4 text-slate-400" />
+              <Inbox className="h-4 w-4 text-sky-400" />
               <span>Track All ({totalCount})</span>
             </button>
           </div>
@@ -114,7 +114,7 @@ const Dashboard = () => {
         <div className="glass-card rounded-2xl p-5 border border-slate-800/80 relative overflow-hidden group">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Requests</span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 group-hover:scale-110 transition-transform">
               <Inbox className="h-5 w-5" />
             </div>
           </div>
