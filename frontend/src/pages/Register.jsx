@@ -58,7 +58,7 @@ const Register = () => {
           minWidth: 200.0,
           scale: 1.0,
           scaleMobile: 1.0,
-          color: 0x3fe8d4,
+          color: 0x10b981,
           backgroundColor: 0x020617,
           backgroundAlpha: 0.35,
           points: 12.0,

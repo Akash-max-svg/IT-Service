@@ -12,7 +12,7 @@ export interface VantaSettings {
 }
 
 export const DEFAULT_VANTA_SETTINGS: VantaSettings = {
-  color: '#3fe8d4',
+  color: '#10b981',
   backgroundColor: '#080b11',
   backgroundAlpha: 0.35,
   points: 12,

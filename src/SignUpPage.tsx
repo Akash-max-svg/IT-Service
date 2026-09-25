@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import VantaNet from 'vanta/dist/vanta.net.min';
-import { Scene } from './Scene';
 import { VantaSettings } from './types/vanta';
 
 interface SignUpPageProps {
@@ -187,10 +186,6 @@ export function SignUpPage({ settings, onSuccess, onNavigateToLogin }: SignUpPag
             </div>
           )}
 
-          <div className="threeui-container">
-            <p className="threeui-title">ThreeUI Interactive Verification</p>
-            <Scene />
-          </div>
         </div>
       </div>
     </div>
