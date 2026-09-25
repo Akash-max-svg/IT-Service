@@ -2,12 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import VantaNet from 'vanta/dist/vanta.net.min';
 import { Scene } from './Scene';
+import { VantaSettings } from './types/vanta';
 
 interface SignUpPageProps {
+  settings: VantaSettings;
   onSuccess?: () => void;
+  onNavigateToLogin?: () => void;
 }
 
-export function SignUpPage({ onSuccess }: SignUpPageProps) {
+export function SignUpPage({ settings, onSuccess, onNavigateToLogin }: SignUpPageProps) {
   const vantaRef = useRef<HTMLDivElement>(null);
   const vantaEffectRef = useRef<any>(null);
 
@@ -24,6 +27,8 @@ export function SignUpPage({ onSuccess }: SignUpPageProps) {
     }
 
     const netInit = VantaNet.default || VantaNet;
+    const colorNum = parseInt(settings.color.replace('#', '0x'), 16);
+    const bgNum = parseInt(settings.backgroundColor.replace('#', '0x'), 16);
 
     if (!vantaEffectRef.current && vantaRef.current) {
       try {
@@ -37,9 +42,30 @@ export function SignUpPage({ onSuccess }: SignUpPageProps) {
           minWidth: 200.0,
           scale: 1.0,
           scaleMobile: 1.0,
+          color: colorNum,
+          backgroundColor: bgNum,
+          backgroundAlpha: settings.enableBgImage ? settings.backgroundAlpha : 1,
+          points: settings.points,
+          maxDistance: settings.maxDistance,
+          spacing: settings.spacing,
+          showDots: settings.showDots,
         });
       } catch (err) {
         console.error('Failed to initialize Vanta.NET:', err);
+      }
+    } else if (vantaEffectRef.current) {
+      try {
+        vantaEffectRef.current.setOptions({
+          color: colorNum,
+          backgroundColor: bgNum,
+          backgroundAlpha: settings.enableBgImage ? settings.backgroundAlpha : 1,
+          points: settings.points,
+          maxDistance: settings.maxDistance,
+          spacing: settings.spacing,
+          showDots: settings.showDots,
+        });
+      } catch (err) {
+        console.error('Failed to update Vanta options:', err);
       }
     }
 
@@ -49,7 +75,16 @@ export function SignUpPage({ onSuccess }: SignUpPageProps) {
         vantaEffectRef.current = null;
       }
     };
-  }, []);
+  }, [
+    settings.color,
+    settings.backgroundColor,
+    settings.backgroundAlpha,
+    settings.points,
+    settings.maxDistance,
+    settings.spacing,
+    settings.showDots,
+    settings.enableBgImage,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +122,17 @@ export function SignUpPage({ onSuccess }: SignUpPageProps) {
 
   return (
     <div className="signup-page" ref={vantaRef}>
+      {/* Background Image Layer */}
+      {settings.enableBgImage && (
+        <div
+          className="vanta-bg-image-layer"
+          style={{
+            backgroundImage: `url('${settings.bgImageUrl}')`,
+            opacity: settings.bgImageOpacity,
+          }}
+        />
+      )}
+
       <div className="signup-overlay">
         <div className="signup-card">
           <div className="signup-header">
@@ -131,6 +177,15 @@ export function SignUpPage({ onSuccess }: SignUpPageProps) {
               {loading ? 'Submitting...' : 'Complete Sign Up'}
             </button>
           </form>
+
+          {onNavigateToLogin && (
+            <div className="auth-footer-link" style={{ marginBottom: 16 }}>
+              <span>Already registered?</span>{' '}
+              <button type="button" className="link-btn" onClick={onNavigateToLogin}>
+                Sign in here
+              </button>
+            </div>
+          )}
 
           <div className="threeui-container">
             <p className="threeui-title">ThreeUI Interactive Verification</p>
