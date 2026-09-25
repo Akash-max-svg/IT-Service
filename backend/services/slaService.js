@@ -1,11 +1,11 @@
 const SLA = require('../models/SLA');
 
-// Default SLA matrix if not customized in database yet
+// Default SLA matrix: 2 Days (48 Hours = 2880 mins) resolution target for agent problem solving
 const DEFAULT_SLA_TARGETS = {
-  CRITICAL: { responseTimeMinutes: 30, resolutionTimeMinutes: 240 },   // 30 mins resp, 4 hrs res
-  HIGH:     { responseTimeMinutes: 60, resolutionTimeMinutes: 480 },   // 1 hr resp, 8 hrs res
-  MEDIUM:   { responseTimeMinutes: 120, resolutionTimeMinutes: 1440 }, // 2 hrs resp, 24 hrs res
-  LOW:      { responseTimeMinutes: 240, resolutionTimeMinutes: 2880 }, // 4 hrs resp, 48 hrs res
+  CRITICAL: { responseTimeMinutes: 30, resolutionTimeMinutes: 2880 },   // 30 mins resp, 2 days (48 hrs) res
+  HIGH:     { responseTimeMinutes: 60, resolutionTimeMinutes: 2880 },   // 1 hr resp, 2 days (48 hrs) res
+  MEDIUM:   { responseTimeMinutes: 120, resolutionTimeMinutes: 2880 }, // 2 hrs resp, 2 days (48 hrs) res
+  LOW:      { responseTimeMinutes: 240, resolutionTimeMinutes: 2880 }, // 4 hrs resp, 2 days (48 hrs) res
 };
 
 /**
@@ -16,7 +16,7 @@ const calculateDeadlines = async (priority) => {
   let slaConfig = await SLA.findOne({ priority: normPriority, isActive: true });
 
   let responseMinutes = DEFAULT_SLA_TARGETS[normPriority]?.responseTimeMinutes || 120;
-  let resolutionMinutes = DEFAULT_SLA_TARGETS[normPriority]?.resolutionTimeMinutes || 1440;
+  let resolutionMinutes = DEFAULT_SLA_TARGETS[normPriority]?.resolutionTimeMinutes || 2880; // 2 days (48 hrs)
 
   if (slaConfig) {
     responseMinutes = slaConfig.responseTimeMinutes;

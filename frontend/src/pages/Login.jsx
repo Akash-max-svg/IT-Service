@@ -195,8 +195,25 @@ const Login = () => {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-xl shadow-emerald-600/30 scale-105">
               <span className="font-mono text-2xl font-extrabold tracking-wider">IT</span>
             </div>
-            <h1 className="mt-4 text-2xl font-extrabold text-white tracking-tight sm:text-3xl">
-              ServiceDesk <span className="text-emerald-400">Pro</span>
+            <h1
+              className="mt-4 text-3xl sm:text-4xl font-black tracking-tight text-emerald-400 select-none animate-pulse"
+              style={{
+                color: '#34d399',
+                textShadow:
+                  '0 0 10px #10b981, 0 0 20px #10b981, 0 0 35px #059669, 0 0 50px #047857',
+              }}
+            >
+              <span>ServiceDesk</span>{' '}
+              <span
+                className="font-black"
+                style={{
+                  color: '#a7f3d0',
+                  textShadow:
+                    '0 0 10px #34d399, 0 0 25px #10b981, 0 0 45px #059669, 0 0 60px #047857',
+                }}
+              >
+                Pro
+              </span>
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-slate-400">
               Enterprise Incident Management & SLA Center

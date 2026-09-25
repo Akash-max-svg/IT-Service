@@ -217,7 +217,11 @@ const AgentDashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-sm">
+              <Clock className="h-4 w-4 text-amber-600" />
+              <span>2-Day (48h) Resolution Window • Rolling Timer</span>
+            </div>
             <div className="inline-flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-800 shadow-sm">
               <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
               <span>Specialist Online & Active</span>
