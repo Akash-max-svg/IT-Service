@@ -160,7 +160,7 @@ const Register = () => {
     >
 
       <div className="relative w-full max-w-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
-        <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-slate-800 shadow-2xl backdrop-blur-2xl">
+        <div className="rounded-3xl p-6 sm:p-9 bg-black/90 border border-slate-800/90 shadow-2xl backdrop-blur-2xl text-white">
           <div className="text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-xl shadow-emerald-600/30 scale-105">
               <span className="font-mono text-2xl font-extrabold tracking-wider">IT</span>

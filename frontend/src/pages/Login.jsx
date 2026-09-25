@@ -189,7 +189,7 @@ const Login = () => {
       />
 
       <div className={`relative w-full ${activeTab === 'register' ? 'max-w-xl' : 'max-w-md'} z-10 transition-all duration-300 pointer-events-auto`}>
-        <div className="glass-panel rounded-3xl p-6 sm:p-9 border border-slate-800 shadow-2xl backdrop-blur-2xl">
+        <div className="rounded-3xl p-6 sm:p-9 bg-slate-950/90 border border-slate-800/90 shadow-2xl backdrop-blur-2xl text-white">
           {/* Header */}
           <div className="text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-xl shadow-emerald-600/30 scale-105">
