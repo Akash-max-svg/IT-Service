@@ -109,10 +109,18 @@ const MyTickets = () => {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            {user?.role === 'Employee' ? 'My Support Tickets' : 'Incident Management Queue'}
+            {normalizeRole(user?.role) === 'Employee'
+              ? 'My Posted Problem Complaints'
+              : normalizeRole(user?.role) === 'Admin'
+              ? 'Complete Problem & Complaint Reports'
+              : 'Incident Management Queue'}
           </h1>
           <p className="mt-1 text-xs text-slate-500">
-            {totalCount} total incidents recorded in the system
+            {normalizeRole(user?.role) === 'Employee'
+              ? `${totalCount} problem complaint(s) lodged strictly by you (${user?.name})`
+              : normalizeRole(user?.role) === 'Admin'
+              ? `${totalCount} complete problem & complaint report(s) across all departments`
+              : `${totalCount} incidents in support queue`}
           </p>
         </div>
 
@@ -141,7 +149,14 @@ const MyTickets = () => {
 
           <button
             type="button"
-            onClick={() => downloadTicketsListPDF(tickets, 'My Incident History Report')}
+            onClick={() =>
+              downloadTicketsListPDF(
+                tickets,
+                normalizeRole(user?.role) === 'Employee'
+                  ? `My Complaints History - ${user?.name}`
+                  : 'Complete Organization Incident Report'
+              )
+            }
             className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold px-3.5 py-2.5 text-xs transition-colors shadow-sm"
             title="Download problem history in PDF format"
           >

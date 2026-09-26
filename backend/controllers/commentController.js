@@ -119,15 +119,17 @@ const getCommentsByTicket = async (req, res) => {
       return res.status(404).json({ message: 'Ticket not found' });
     }
 
+    const userRole = normalizeRole(req.user.role);
+
     // Role check: Employee can only view their own ticket comments
-    if (req.user.role === 'Employee' && ticket.createdBy.toString() !== req.user._id.toString()) {
+    if (userRole === 'Employee' && ticket.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
     const query = { ticket: ticketId };
 
     // Employees cannot see internal agent notes
-    if (req.user.role === 'Employee') {
+    if (userRole === 'Employee') {
       query.isInternalNote = false;
     }
 

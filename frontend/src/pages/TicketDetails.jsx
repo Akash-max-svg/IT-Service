@@ -71,9 +71,9 @@ const TicketDetails = () => {
 
   const [activeTab, setActiveTab] = useState('discussion'); // 'discussion' or 'audit'
 
-  const fetchTicketData = async () => {
+  const fetchTicketData = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       const [{ data: ticketData }, { data: commentsData }] = await Promise.all([
         ticketAPI.getTicketById(id),
         commentAPI.getComments(id),
@@ -90,7 +90,7 @@ const TicketDetails = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Error loading incident details');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
@@ -101,7 +101,7 @@ const TicketDetails = () => {
     socket.emit('join_ticket', id);
 
     const handleUpdate = () => {
-      fetchTicketData();
+      fetchTicketData(true);
     };
 
     socket.on('notification', handleUpdate);
@@ -146,7 +146,7 @@ const TicketDetails = () => {
       setCommentText('');
       setCommentFiles([]);
       setIsInternalNote(false);
-      fetchTicketData();
+      fetchTicketData(true);
     } catch (err) {
       console.error('Failed to post comment', err);
     } finally {
@@ -155,32 +155,41 @@ const TicketDetails = () => {
   };
 
   const handleStatusChange = async (newStatus, customResolutionNotes = '') => {
-    const resNotes = customResolutionNotes || resolutionNotes;
+    const resNotes = (customResolutionNotes !== '' ? customResolutionNotes : resolutionNotes).trim();
+    if (newStatus === 'RESOLVED' && !resNotes) {
+      alert('Please enter resolution notes describing how the problem was solved.');
+      return;
+    }
+
     // Immediately update local state in project so UI reacts without page reload
     setTicket((prev) =>
       prev
         ? {
             ...prev,
-            status: newStatus,
+            status: newStatus || prev.status,
+            assignedTo: prev.assignedTo || user,
             resolutionNotes: resNotes || prev.resolutionNotes,
-            resolvedAt: newStatus === 'RESOLVED' ? new Date().toISOString() : prev.resolvedAt,
-            closedAt: newStatus === 'CLOSED' ? new Date().toISOString() : prev.closedAt,
+            solution: resNotes || prev.solution,
+            resolvedAt: newStatus === 'RESOLVED' ? (prev.resolvedAt || new Date().toISOString()) : prev.resolvedAt,
+            closedAt: newStatus === 'CLOSED' ? (prev.closedAt || new Date().toISOString()) : prev.closedAt,
           }
         : prev
     );
+
     try {
       const { data: updated } = await ticketAPI.updateStatus(id, {
         status: newStatus,
         resolutionNotes: resNotes,
+        solution: resNotes,
       });
       if (updated) {
         setTicket(updated);
       }
       setShowResolveModal(false);
-      fetchTicketData();
+      fetchTicketData(true);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update status');
-      fetchTicketData();
+      fetchTicketData(true);
     }
   };
 
@@ -363,6 +372,7 @@ const TicketDetails = () => {
           )}
 
           {/* Support Staff Claim & Workflow Controls */}
+          {/* Support Staff Claim & Workflow Controls */}
           {isSupportStaff && (
             <>
               {ticket.assignedTo?._id !== user._id && !isAdmin && (
@@ -374,6 +384,7 @@ const TicketDetails = () => {
                 </button>
               )}
 
+              {/* Start Progress if not yet started */}
               {['OPEN', 'ASSIGNED', 'REOPENED'].includes(ticket.status) && (
                 <button
                   onClick={() => handleStatusChange('IN PROGRESS')}
@@ -383,37 +394,59 @@ const TicketDetails = () => {
                 </button>
               )}
 
+              {ticket.status === 'IN PROGRESS' && (
+                <button
+                  onClick={() => handleStatusChange('WAITING FOR USER')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-950/40 px-3.5 py-2 text-xs font-bold text-purple-300 hover:bg-purple-900/60 transition-colors"
+                >
+                  Need User Info
+                </button>
+              )}
+
+              {ticket.status === 'WAITING FOR USER' && (
+                <button
+                  onClick={() => handleStatusChange('IN PROGRESS')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500"
+                >
+                  Resume Progress
+                </button>
+              )}
+
               {['IN PROGRESS', 'WAITING FOR USER'].includes(ticket.status) && (
-                <>
-                  {ticket.status === 'IN PROGRESS' && (
-                    <button
-                      onClick={() => handleStatusChange('WAITING FOR USER')}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-purple-500/40 bg-purple-950/40 px-3.5 py-2 text-xs font-bold text-purple-300 hover:bg-purple-900/60 transition-colors"
-                    >
-                      Need User Info
-                    </button>
-                  )}
-                  {ticket.status === 'WAITING FOR USER' && (
-                    <button
-                      onClick={() => handleStatusChange('IN PROGRESS')}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500"
-                    >
-                      Resume Progress
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowEscalateModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/40 px-3.5 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/60 transition-colors"
-                  >
-                    <Flame className="h-3.5 w-3.5 text-rose-400" /> Escalate
-                  </button>
-                  <button
-                    onClick={() => setShowResolveModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 hover:brightness-110 transition-all"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Mark Resolved
-                  </button>
-                </>
+                <button
+                  onClick={() => setShowEscalateModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/40 px-3.5 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/60 transition-colors"
+                >
+                  <Flame className="h-3.5 w-3.5 text-rose-400" /> Escalate
+                </button>
+              )}
+
+              {/* Complete & Solve Problem Button (Available for all active tickets!) */}
+              {!['RESOLVED', 'CLOSED'].includes(ticket.status) && (
+                <button
+                  onClick={() => {
+                    setResolutionNotes(ticket.resolutionNotes || ticket.solution || '');
+                    setShowResolveModal(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 hover:brightness-110 transition-all"
+                  title="Mark as complete and write the solution"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Complete & Solve Problem
+                </button>
+              )}
+
+              {/* Update Solution Button for Support Staff when already resolved/closed */}
+              {['RESOLVED', 'CLOSED'].includes(ticket.status) && (
+                <button
+                  onClick={() => {
+                    setResolutionNotes(ticket.resolutionNotes || ticket.solution || '');
+                    setShowResolveModal(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 px-3.5 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60 transition-colors"
+                  title="Update the verified solution notes"
+                >
+                  <FileText className="h-3.5 w-3.5 text-emerald-400" /> Update Solution
+                </button>
               )}
             </>
           )}
@@ -556,13 +589,27 @@ const TicketDetails = () => {
                 )}
               </div>
 
-              {ticket.resolutionNotes && (
+              {(ticket.resolutionNotes || ticket.solution) && (
                 <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-4">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-                    Resolution Summary & Diagnostic Fix:
-                  </span>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                      Problem Solved • Verified Solution & Fix:
+                    </span>
+                    {isSupportStaff && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResolutionNotes(ticket.resolutionNotes || ticket.solution || '');
+                          setShowResolveModal(true);
+                        }}
+                        className="text-[11px] font-bold text-emerald-300 hover:text-white underline cursor-pointer"
+                      >
+                        Edit Solution
+                      </button>
+                    )}
+                  </div>
                   <p className="mt-1 text-xs text-slate-100 leading-relaxed font-sans whitespace-pre-wrap">
-                    {ticket.resolutionNotes}
+                    {ticket.resolutionNotes || ticket.solution}
                   </p>
                   {ticket.resolvedAt && (
                     <p className="mt-2 text-[10px] text-emerald-400 font-mono">
@@ -649,13 +696,27 @@ const TicketDetails = () => {
             </div>
 
             {/* Resolution Banner */}
-            {ticket.resolutionNotes && (
+            {(ticket.resolutionNotes || ticket.solution) && (
               <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-5 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  <CheckCircle2 className="h-4 w-4" /> Resolution Details
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    <CheckCircle2 className="h-4 w-4" /> Problem Solved & Resolution Details
+                  </div>
+                  {isSupportStaff && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResolutionNotes(ticket.resolutionNotes || ticket.solution || '');
+                        setShowResolveModal(true);
+                      }}
+                      className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+                    >
+                      Update Solution
+                    </button>
+                  )}
                 </div>
-                <p className="text-xs text-slate-200 leading-relaxed font-sans">
-                  {ticket.resolutionNotes}
+                <p className="text-xs text-slate-200 leading-relaxed font-sans whitespace-pre-wrap">
+                  {ticket.resolutionNotes || ticket.solution}
                 </p>
                 {ticket.resolvedAt && (
                   <p className="text-[11px] text-emerald-400 font-mono pt-1">
@@ -1084,42 +1145,65 @@ const TicketDetails = () => {
       </div>
 
       {/* Resolve Incident Modal */}
+      {/* Complete & Solve / Update Solution Modal */}
       {showResolveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <div className="flex items-center gap-2 text-emerald-400 mb-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-2 text-emerald-400">
               <CheckCircle2 className="h-6 w-6" />
-              <h3 className="text-lg font-bold text-white">Resolve Incident</h3>
+              <h3 className="text-lg font-bold text-white">
+                {['RESOLVED', 'CLOSED'].includes(ticket.status)
+                  ? 'Update Problem Solution'
+                  : 'Complete & Solve Problem'}
+              </h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
-              Enter the resolution summary and steps taken so the user can verify the fix.
+            <p className="text-xs text-slate-400">
+              {['RESOLVED', 'CLOSED'].includes(ticket.status)
+                ? 'Update or expand the diagnostic fix and resolution details for this incident.'
+                : 'Enter the solution summary and steps taken so the user can verify the fix and close the incident.'}
             </p>
 
-            <textarea
-              rows={4}
-              required
-              value={resolutionNotes}
-              onChange={(e) => setResolutionNotes(e.target.value)}
-              placeholder="e.g. Swapped malfunctioning docking station, verified dual display outputs at 60Hz..."
-              className="w-full rounded-2xl border border-slate-700 bg-slate-800 p-3.5 text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
-            />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleStatusChange(
+                  ['RESOLVED', 'CLOSED'].includes(ticket.status) ? ticket.status : 'RESOLVED'
+                );
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Resolution Notes / Solution Summary *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={resolutionNotes}
+                  onChange={(e) => setResolutionNotes(e.target.value)}
+                  placeholder="e.g. Swapped malfunctioning docking station, verified dual display outputs at 60Hz and confirmed with employee..."
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-800 p-3.5 text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
 
-            <div className="mt-5 flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setShowResolveModal(false)}
-                className="rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-400 hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStatusChange('RESOLVED')}
-                className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 shadow-lg shadow-emerald-600/30"
-              >
-                Confirm Resolution
-              </button>
-            </div>
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowResolveModal(false)}
+                  className="rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-400 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 shadow-lg shadow-emerald-600/30"
+                >
+                  {['RESOLVED', 'CLOSED'].includes(ticket.status)
+                    ? 'Save Updated Solution'
+                    : 'Confirm & Solve Problem'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

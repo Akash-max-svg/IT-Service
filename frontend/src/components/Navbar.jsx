@@ -16,7 +16,30 @@ import {
   Sparkles,
   Lock,
   CheckCheck,
+  X,
+  AlertCircle,
 } from 'lucide-react';
+
+const playNotificationChime = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {
+    // Autoplay audio policy fallback
+  }
+};
 
 const Navbar = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
@@ -28,6 +51,7 @@ const Navbar = ({ onToggleSidebar }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [filterUnreadOnly, setFilterUnreadOnly] = useState(false);
+  const [activeToast, setActiveToast] = useState(null);
 
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -52,18 +76,43 @@ const Navbar = ({ onToggleSidebar }) => {
 
       const socket = getSocket();
       socket.emit('join_user', user._id);
-      if (['Agent', 'Admin'].includes(normalizeRole(user.role))) {
+      const role = normalizeRole(user.role);
+      if (['Agent', 'Admin'].includes(role)) {
         socket.emit('join_support');
       }
 
       const handleNewNotification = (notif) => {
         setNotifications((prev) => [notif, ...prev]);
         setUnreadCount((c) => c + 1);
+        playNotificationChime();
+        setActiveToast(notif);
+        setTimeout(() => {
+          setActiveToast((curr) => (curr?._id === notif?._id ? null : curr));
+        }, 7000);
+      };
+
+      const handleTicketAssigned = (data) => {
+        const myId = user._id?.toString();
+        if (data?.assignedTo?._id === myId || data?.agentId === myId) {
+          playNotificationChime();
+          setActiveToast({
+            _id: `assigned-${Date.now()}`,
+            title: `🎯 New Ticket Assigned: ${data.ticketNumber}`,
+            message: `Administrator assigned incident "${data.title}" (${data.priority}) to you for immediate resolution.`,
+            ticket: { _id: data.ticketId, ticketNumber: data.ticketNumber },
+          });
+          setTimeout(() => {
+            setActiveToast(null);
+          }, 7000);
+        }
       };
 
       socket.on('notification', handleNewNotification);
+      socket.on('ticket_assigned', handleTicketAssigned);
+
       return () => {
         socket.off('notification', handleNewNotification);
+        socket.off('ticket_assigned', handleTicketAssigned);
       };
     }
   }, [user]);
@@ -105,7 +154,7 @@ const Navbar = ({ onToggleSidebar }) => {
     : notifications;
 
   return (
-    <header className="portal-navbar sticky top-0 z-40 flex h-16 w-full items-center justify-between px-4 sm:px-6 backdrop-blur-xl shadow-sm transition-colors duration-300">
+    <header className="portal-navbar relative z-30 flex h-16 min-h-[4rem] max-h-[4rem] shrink-0 flex-shrink-0 w-full items-center justify-between px-4 sm:px-6 backdrop-blur-xl shadow-sm transition-colors duration-200">
       {/* Brand & Mobile Hamburger */}
       <div className="flex items-center gap-4">
         <button
@@ -309,6 +358,50 @@ const Navbar = ({ onToggleSidebar }) => {
           )}
         </div>
       </div>
+
+      {/* Real-time Floating Notification Banner */}
+      {activeToast && (
+        <div className="fixed top-20 right-4 sm:right-6 z-50 max-w-sm w-full rounded-3xl border-2 border-amber-400 bg-white/95 p-4 shadow-[0_15px_35px_rgba(245,158,11,0.25)] backdrop-blur-md animate-in slide-in-from-top-3 duration-300">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-900 border border-amber-300 shrink-0 shadow-sm">
+                <Bell className="h-5 w-5 animate-bounce text-amber-700" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                  <h4 className="font-extrabold text-xs text-slate-900 leading-tight">
+                    {activeToast.title}
+                  </h4>
+                </div>
+                <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed font-medium">
+                  {activeToast.message}
+                </p>
+                {activeToast.ticket && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tId = activeToast.ticket._id || activeToast.ticket;
+                      navigate(`/tickets/${tId}`);
+                      setActiveToast(null);
+                    }}
+                    className="inline-flex items-center gap-1 pt-1.5 text-xs font-bold text-amber-700 hover:text-amber-900 hover:underline cursor-pointer"
+                  >
+                    <span>Open Incident #{activeToast.ticket.ticketNumber || ''} →</span>
+                  </button>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveToast(null)}
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

@@ -76,12 +76,37 @@ const createTicket = async (req, res) => {
       notes: `Ticket submitted with ${ticketPriority} priority`,
     });
 
-    // Broadcast to support team
+    // Immediately notify all Administrators in the system
+    try {
+      const admins = await User.find({ role: 'Admin' }).select('_id name email');
+      for (const admin of admins) {
+        await sendNotification({
+          recipientId: admin._id,
+          senderId: req.user._id,
+          ticketId: ticket._id,
+          title: `🚨 New Problem Reported: ${ticket.ticketNumber}`,
+          message: `Employee ${req.user.name} reported a new ${ticketPriority} priority complaint: "${ticket.title}". Please assign a support agent.`,
+          type: 'TICKET_CREATED',
+        });
+      }
+    } catch (notifErr) {
+      console.error('Admin notification dispatch error:', notifErr.message);
+    }
+
+    // Broadcast rich event to support team (Admins and Agents)
     broadcastToSupport('new_ticket', {
       _id: ticket._id,
       ticketNumber: ticket.ticketNumber,
       title: ticket.title,
       priority: ticket.priority,
+      category: ticket.category,
+      departmentName: ticket.departmentName,
+      createdBy: {
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        departmentName: req.user.departmentName,
+      },
       createdAt: ticket.createdAt,
     });
 
@@ -119,17 +144,18 @@ const getTickets = async (req, res) => {
 
     const query = {};
 
-    // Role-based visibility:
-    // When an Employee queries tickets, filter strictly by their authenticated user ID from JWT!
+    // Role-based visibility enforcement:
     const userRole = normalizeRole(req.user.role);
     if (userRole === 'Employee') {
+      // Employees are strictly restricted to ONLY their own posted complaints
       query.createdBy = req.user._id;
     } else if (userRole === 'Agent') {
-      // Agents can view tickets assigned to them or open unassigned tickets
+      // Agents view assigned tickets or triage pool
       if (req.query.assignedOnly === 'true') {
         query.assignedTo = req.user._id;
       }
     }
+    // Admins have full access to complete problem & complaint reports across all employees
 
     if (status && status !== 'ALL') {
       query.status = status;
@@ -151,17 +177,27 @@ const getTickets = async (req, res) => {
       }
     }
 
+    const conditions = [];
+
     if (search) {
-      query.$or = [
-        { ticketNumber: { $regex: search, $options: 'i' } },
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { category: { $regex: search, $options: 'i' } },
-      ];
+      conditions.push({
+        $or: [
+          { ticketNumber: { $regex: search, $options: 'i' } },
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { category: { $regex: search, $options: 'i' } },
+        ],
+      });
     }
 
     if (breached === 'true') {
-      query.$or = [{ isResponseBreached: true }, { isResolutionBreached: true }];
+      conditions.push({
+        $or: [{ isResponseBreached: true }, { isResolutionBreached: true }],
+      });
+    }
+
+    if (conditions.length > 0) {
+      query.$and = conditions;
     }
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
@@ -246,7 +282,9 @@ const getTicketById = async (req, res) => {
 // @access  Private (Agent, Admin, or Employee if reopening/closing)
 const updateTicketStatus = async (req, res) => {
   try {
-    const { status, resolutionNotes, note } = req.body;
+    const { status, resolutionNotes, note, solution } = req.body;
+    const finalResolutionNotes = (resolutionNotes || solution || note || '').trim();
+
     const ticket = await Ticket.findById(req.params.id)
       .populate('createdBy', 'name email')
       .populate('assignedTo', 'name email');
@@ -256,6 +294,7 @@ const updateTicketStatus = async (req, res) => {
     }
 
     const previousStatus = ticket.status;
+    const targetStatus = status || ticket.status;
     const allowedStatuses = [
       'OPEN',
       'ASSIGNED',
@@ -267,14 +306,14 @@ const updateTicketStatus = async (req, res) => {
       'REOPENED',
     ];
 
-    if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({ message: `Invalid status: ${status}` });
+    if (!allowedStatuses.includes(targetStatus)) {
+      return res.status(400).json({ message: `Invalid status: ${targetStatus}` });
     }
 
     // Role permissions for state transitions
     if (normalizeRole(req.user.role) === 'Employee') {
       // Employees can only REOPEN or CLOSE
-      if (!['REOPENED', 'CLOSED'].includes(status)) {
+      if (!['REOPENED', 'CLOSED'].includes(targetStatus)) {
         return res.status(403).json({ message: 'Employees can only reopen or close resolved tickets' });
       }
       if (ticket.createdBy._id.toString() !== req.user._id.toString()) {
@@ -283,27 +322,40 @@ const updateTicketStatus = async (req, res) => {
     }
 
     // Update state fields
-    ticket.status = status;
+    ticket.status = targetStatus;
 
-    if (status === 'IN PROGRESS' && !ticket.respondedAt) {
+    if (targetStatus === 'IN PROGRESS' && !ticket.respondedAt) {
       ticket.respondedAt = new Date();
     }
 
-    if (status === 'RESOLVED') {
-      ticket.resolvedAt = new Date();
-      if (resolutionNotes) {
-        ticket.resolutionNotes = resolutionNotes;
+    if (targetStatus === 'RESOLVED') {
+      ticket.resolvedAt = ticket.resolvedAt || new Date();
+      if (finalResolutionNotes) {
+        ticket.resolutionNotes = finalResolutionNotes;
+        ticket.solution = finalResolutionNotes;
+      }
+      // If resolving staff is Agent or Admin, ensure ticket is assigned to this staff member
+      if (['Agent', 'Admin'].includes(normalizeRole(req.user.role))) {
+        if (!ticket.assignedTo) {
+          ticket.assignedTo = req.user._id;
+        }
       }
     }
 
-    if (status === 'CLOSED') {
+    // Allow updating solution notes on resolved or closed tickets anytime
+    if (finalResolutionNotes && ['RESOLVED', 'CLOSED'].includes(ticket.status)) {
+      ticket.resolutionNotes = finalResolutionNotes;
+      ticket.solution = finalResolutionNotes;
+    }
+
+    if (targetStatus === 'CLOSED') {
       ticket.closedAt = new Date();
       if (!ticket.resolvedAt) {
         ticket.resolvedAt = new Date();
       }
     }
 
-    if (status === 'REOPENED') {
+    if (targetStatus === 'REOPENED') {
       ticket.reopenedAt = new Date();
       ticket.reopenedCount = (ticket.reopenedCount || 0) + 1;
       ticket.status = 'REOPENED';
@@ -316,38 +368,57 @@ const updateTicketStatus = async (req, res) => {
     await AuditLog.create({
       ticket: ticket._id,
       performedBy: req.user._id,
-      action: 'STATUS_UPDATED',
+      action: targetStatus === 'RESOLVED' ? 'TICKET_RESOLVED' : 'STATUS_UPDATED',
       previousValue: previousStatus,
-      newValue: status,
-      notes: note || resolutionNotes || `Status changed from ${previousStatus} to ${status}`,
+      newValue: ticket.status,
+      notes: finalResolutionNotes || note || `Status changed from ${previousStatus} to ${ticket.status}`,
     });
 
-    // Notify ticket owner if agent changed status
+    // Notify ticket owner (Employee) if staff changed status
     if (req.user._id.toString() !== ticket.createdBy._id.toString()) {
+      const isResolved = targetStatus === 'RESOLVED';
       await sendNotification({
         recipientId: ticket.createdBy._id,
         senderId: req.user._id,
         ticketId: ticket._id,
-        title: `Ticket Status Updated: ${status}`,
-        message: `Your ticket ${ticket.ticketNumber} is now ${status}. ${resolutionNotes ? 'Resolution notes: ' + resolutionNotes : ''}`,
-        type: status === 'RESOLVED' ? 'RESOLVED' : 'STATUS_CHANGED',
+        title: isResolved
+          ? `✅ Problem Solved & Completed: [${ticket.ticketNumber}]`
+          : `Ticket Status Updated: ${ticket.status}`,
+        message: isResolved
+          ? `Your problem complaint [${ticket.ticketNumber}] "${ticket.title}" has been solved by ${req.user.name}. Assigned Solution: ${finalResolutionNotes || 'Problem diagnosed and verified as resolved.'}`
+          : `Your ticket ${ticket.ticketNumber} is now ${ticket.status}. ${finalResolutionNotes ? 'Solution: ' + finalResolutionNotes : ''}`,
+        type: isResolved ? 'RESOLVED' : 'STATUS_CHANGED',
       });
 
       await sendTicketEmail({
         to: ticket.createdBy.email,
-        subject: `[${ticket.ticketNumber}] Status Changed to ${status}`,
+        subject: isResolved
+          ? `[${ticket.ticketNumber}] Problem Solved & Assigned Task Completed`
+          : `[${ticket.ticketNumber}] Status Changed to ${ticket.status}`,
         html: `
-          <h2>Ticket Status Update</h2>
+          <h2>${isResolved ? '✅ Problem Solved & Task Completed' : 'Ticket Status Update'}</h2>
           <p>Your ticket <strong>${ticket.ticketNumber}</strong> (${ticket.title}) has been updated.</p>
-          <p><strong>Current Status:</strong> ${status}</p>
-          ${resolutionNotes ? `<p><strong>Resolution Notes:</strong> ${resolutionNotes}</p>` : ''}
-          <p>Please log in to your IT Service Desk portal to view details.</p>
+          <p><strong>Current Status:</strong> <span style="color:#059669;font-weight:bold;">${ticket.status}</span></p>
+          ${finalResolutionNotes ? `<p><strong>Verified Solution / Resolution:</strong> ${finalResolutionNotes}</p>` : ''}
+          <p>Please log in to your IT Service Desk portal to view details and confirm resolution.</p>
         `,
       });
     }
 
+    // Notify assigned agent if admin/staff resolved ticket and agent is different from resolving user
+    if (targetStatus === 'RESOLVED' && ticket.assignedTo && req.user._id.toString() !== ticket.assignedTo._id.toString()) {
+      await sendNotification({
+        recipientId: ticket.assignedTo._id,
+        senderId: req.user._id,
+        ticketId: ticket._id,
+        title: `Task Completed: ${ticket.ticketNumber}`,
+        message: `Problem marked as solved and assigned task completed by ${req.user.name}. Solution: ${finalResolutionNotes || 'Verified and marked complete.'}`,
+        type: 'RESOLVED',
+      });
+    }
+
     // Notify agent if employee closed ticket
-    if (status === 'CLOSED' && ticket.assignedTo && req.user._id.toString() !== ticket.assignedTo._id.toString()) {
+    if (targetStatus === 'CLOSED' && ticket.assignedTo && req.user._id.toString() !== ticket.assignedTo._id.toString()) {
       await sendNotification({
         recipientId: ticket.assignedTo._id,
         senderId: req.user._id,
@@ -359,7 +430,7 @@ const updateTicketStatus = async (req, res) => {
     }
 
     // Notify agent or support pool if employee reopened
-    if (status === 'REOPENED') {
+    if (targetStatus === 'REOPENED') {
       if (ticket.assignedTo) {
         await sendNotification({
           recipientId: ticket.assignedTo._id,
@@ -384,6 +455,9 @@ const updateTicketStatus = async (req, res) => {
       ticketNumber: ticket.ticketNumber,
       status: ticket.status,
       resolutionNotes: ticket.resolutionNotes,
+      solution: ticket.solution,
+      resolvedAt: ticket.resolvedAt,
+      assignedTo: ticket.assignedTo,
     });
 
     const updated = await Ticket.findById(ticket._id)
@@ -439,14 +513,14 @@ const assignTicket = async (req, res) => {
       notes: `Ticket assigned to ${agent.name} (${agent.role})`,
     });
 
-    // Notify newly assigned agent
+    // Notify newly assigned agent immediately
     if (targetAgentId.toString() !== req.user._id.toString()) {
       await sendNotification({
         recipientId: targetAgentId,
         senderId: req.user._id,
         ticketId: ticket._id,
-        title: `New Ticket Assigned: ${ticket.ticketNumber}`,
-        message: `You have been assigned to handle incident: ${ticket.title} (${ticket.priority})`,
+        title: `🎯 Incident Assigned: ${ticket.ticketNumber}`,
+        message: `Administrator assigned incident "${ticket.title}" (${ticket.priority}) to you for immediate resolution.`,
         type: 'ASSIGNED',
       });
     }
@@ -461,7 +535,22 @@ const assignTicket = async (req, res) => {
       type: 'ASSIGNED',
     });
 
-    // Real-time broadcast
+    // Real-time broadcast for live queue refresh and instant agent notification
+    broadcastToSupport('ticket_assigned', {
+      ticketId: ticket._id,
+      ticketNumber: ticket.ticketNumber,
+      title: ticket.title,
+      priority: ticket.priority,
+      status: ticket.status,
+      assignedTo: {
+        _id: agent._id,
+        name: agent.name,
+        email: agent.email,
+        specialization: agent.specialization,
+      },
+      assignedBy: req.user.name,
+    });
+
     broadcastTicketUpdate(ticket._id, 'ticket_updated', {
       ticketId: ticket._id,
       ticketNumber: ticket.ticketNumber,

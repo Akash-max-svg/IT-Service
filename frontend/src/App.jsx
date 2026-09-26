@@ -9,7 +9,8 @@ import { normalizeRole } from './utils/roleUtils';
 // Layout Components
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
-import AeroBackground from './components/AeroBackground';
+import VantaCloudsBackground from './components/VantaCloudsBackground';
+import Footer from './components/Footer';
 
 // Pages
 import Login from './pages/Login';
@@ -29,18 +30,29 @@ const AppLayout = () => {
   const { currentTheme } = useTheme();
 
   return (
-    <div className={`theme-${currentTheme} min-h-screen flex flex-col relative selection:bg-amber-400 selection:text-slate-950`}>
-      {/* Reusable Fixed AeroShards Background Layer */}
-      <AeroBackground />
+    <div className={`theme-${currentTheme} h-screen w-full flex flex-col overflow-hidden relative selection:bg-amber-400 selection:text-slate-950`}>
+      {/* 3D Interactive Vanta Clouds Background Layer across all roles */}
+      <VantaCloudsBackground />
 
-      {/* Dashboard UI Wrapper with relative positioning and higher z-index */}
-      <div className="relative z-10 flex flex-col min-h-screen">
+      {/* Dashboard UI Wrapper: fills entire viewport, header at top, body below */}
+      <div className="relative z-10 flex flex-col h-full w-full overflow-hidden">
+        {/* Top Navbar: Firmly fixed at the top, locked height 64px, never moves or collapses */}
         <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-        <div className="flex flex-1">
+
+        {/* Dashboard Work Area: Sidebar on left + vertically scrollable content on right */}
+        <div className="flex-1 flex overflow-hidden w-full relative">
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-            <Outlet />
-          </main>
+
+          <div
+            id="main-dashboard-scroll-container"
+            className="flex-1 h-full overflow-y-auto overflow-x-hidden flex flex-col min-w-0 bg-transparent"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+              <Outlet />
+            </main>
+            <Footer />
+          </div>
         </div>
       </div>
     </div>
@@ -122,7 +134,7 @@ function App() {
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute allowedRoles={['Agent', 'Admin']}>
+                  <ProtectedRoute allowedRoles={['Admin']}>
                     <Reports />
                   </ProtectedRoute>
                 }

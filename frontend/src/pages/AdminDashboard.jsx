@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useAuth from '../hooks/useAuth';
 import { adminAPI, ticketAPI, userAPI, getSocket } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
@@ -15,12 +16,15 @@ import {
   Pie,
   Cell,
   Legend,
+  CartesianGrid,
+  LabelList,
 } from 'recharts';
 import {
   ShieldCheck,
   Inbox,
   AlertTriangle,
   CheckCircle2,
+  CheckCircle,
   Users,
   Award,
   Clock,
@@ -47,19 +51,43 @@ import {
   Briefcase,
   ExternalLink,
   Download,
+  BarChart2,
+  PieChart as PieChartIcon,
+  X,
 } from 'lucide-react';
 import { downloadTicketPDF, downloadTicketsListPDF } from '../utils/pdfGenerator';
 
 const COLORS = ['#f59e0b', '#d97706', '#10b981', '#6366f1', '#ef4444', '#8b5cf6', '#ec4899'];
 const PRIORITY_COLORS = {
-  CRITICAL: '#ef4444',
-  HIGH: '#f59e0b',
-  MEDIUM: '#eab308',
-  LOW: '#10b981',
+  CRITICAL: '#ef4444', // Red
+  HIGH: '#eab308',     // Yellow
+  MEDIUM: '#10b981',   // Green
+  LOW: '#3b82f6',      // Blue
 };
+const STATUS_COLORS = {
+  OPEN: '#3b82f6',
+  ASSIGNED: '#6366f1',
+  'IN PROGRESS': '#f59e0b',
+  'WAITING FOR USER': '#a855f7',
+  ESCALATED: '#ef4444',
+  RESOLVED: '#10b981',
+  CLOSED: '#64748b',
+  REOPENED: '#f97316',
+};
+const CATEGORY_PALETTE = [
+  '#f59e0b',
+  '#3b82f6',
+  '#10b981',
+  '#8b5cf6',
+  '#ec4899',
+  '#06b6d4',
+  '#f97316',
+  '#6366f1',
+];
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Data states
   const [metrics, setMetrics] = useState(null);
@@ -68,10 +96,17 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Resolution states
+  const [resolvingTicket, setResolvingTicket] = useState(null);
+  const [resolutionNotes, setResolutionNotes] = useState('');
+  const [isSubmittingResolution, setIsSubmittingResolution] = useState(false);
+
   // Filter & search states
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [pieChartMode, setPieChartMode] = useState('priority'); // 'priority' | 'status'
+  const [barChartMode, setBarChartMode] = useState('category'); // 'category' | 'department'
 
   // Interaction states
   const [assigningTicketId, setAssigningTicketId] = useState(null);
@@ -116,14 +151,23 @@ const AdminDashboard = () => {
       loadDashboardData(true);
     };
 
-    socket.on('new_ticket', handleUpdate);
+    socket.on('new_ticket', (ticket) => {
+      loadDashboardData(true);
+      if (ticket) {
+        setToastMessage({
+          type: 'new_problem',
+          text: `🚨 New Problem Lodged: [${ticket.ticketNumber || 'New'}] "${ticket.title || 'Untitled'}" (${ticket.priority || 'MEDIUM'} Priority) - Needs Agent Assignment!`,
+        });
+        setTimeout(() => setToastMessage(null), 7000);
+      }
+    });
     socket.on('ticket_updated', handleUpdate);
     socket.on('ticket_escalated', handleUpdate);
     socket.on('ticket_reopened', handleUpdate);
     socket.on('notification', handleUpdate);
 
     return () => {
-      socket.off('new_ticket', handleUpdate);
+      socket.off('new_ticket');
       socket.off('ticket_updated', handleUpdate);
       socket.off('ticket_escalated', handleUpdate);
       socket.off('ticket_reopened', handleUpdate);
@@ -164,6 +208,75 @@ const AdminDashboard = () => {
       setTimeout(() => setToastMessage(null), 4500);
     } finally {
       setAssigningTicketId(null);
+    }
+  };
+
+  // Complete and solve problem / write solution handler
+  const handleCompleteAndSolve = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!resolvingTicket) return;
+    const cleanSolution = (resolutionNotes || '').trim();
+    if (!cleanSolution) {
+      alert('Please enter or select resolution notes describing how the problem was solved.');
+      return;
+    }
+
+    const currentTicket = resolvingTicket;
+    const nowIso = new Date().toISOString();
+
+    // Close modal right away so user sees immediate reaction in table
+    setResolvingTicket(null);
+    setResolutionNotes('');
+
+    // Immediately optimistically update local state across AdminDashboard
+    setTickets((prev) =>
+      prev.map((t) =>
+        t._id === currentTicket._id
+          ? {
+              ...t,
+              status: 'RESOLVED',
+              resolutionNotes: cleanSolution,
+              solution: cleanSolution,
+              resolvedAt: t.resolvedAt || nowIso,
+              assignedTo: t.assignedTo || user,
+            }
+          : t
+      )
+    );
+
+    // Show immediate affirmative toast
+    setToastMessage({
+      type: 'success',
+      text: `✅ Problem Done • Your assigned task is completed! Incident [${currentTicket.ticketNumber}] marked as RESOLVED with assigned solution.`,
+    });
+    setTimeout(() => setToastMessage(null), 6000);
+
+    try {
+      setIsSubmittingResolution(true);
+      const { data: updated } = await ticketAPI.updateStatus(currentTicket._id, {
+        status: 'RESOLVED',
+        resolutionNotes: cleanSolution,
+        solution: cleanSolution,
+      });
+
+      if (updated) {
+        setTickets((prev) =>
+          prev.map((t) => (t._id === updated._id ? { ...t, ...updated } : t))
+        );
+      }
+
+      // Refresh metrics in background
+      adminAPI.getMetrics().then(({ data }) => setMetrics(data)).catch(() => {});
+    } catch (err) {
+      console.error('Failed to resolve ticket:', err);
+      setToastMessage({
+        type: 'error',
+        text: err.response?.data?.message || 'Failed to complete and solve ticket',
+      });
+      setTimeout(() => setToastMessage(null), 4500);
+      loadDashboardData(true);
+    } finally {
+      setIsSubmittingResolution(false);
     }
   };
 
@@ -228,16 +341,210 @@ const AdminDashboard = () => {
   }
 
   const counts = metrics?.counts || {};
-  const priorityData = (metrics?.priorityDistribution || []).map((p) => ({
-    name: p._id,
-    value: p.count,
-    color: PRIORITY_COLORS[p._id] || '#f59e0b',
-  }));
 
-  const categoryData = (metrics?.categoryDistribution || []).map((c) => ({
-    name: c._id,
-    count: c.count,
-  }));
+  // Live and accurate calculations for charts matching real-time tickets state
+  const priorityChartData = useMemo(() => {
+    const countsMap = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+    if (tickets.length > 0) {
+      tickets.forEach((t) => {
+        const p = (t.priority || 'MEDIUM').toUpperCase();
+        if (countsMap[p] !== undefined) countsMap[p]++;
+        else countsMap[p] = (countsMap[p] || 0) + 1;
+      });
+    } else if (metrics?.priorityDistribution) {
+      metrics.priorityDistribution.forEach((p) => {
+        const key = (p._id || 'MEDIUM').toUpperCase();
+        countsMap[key] = p.count;
+      });
+    }
+
+    const total = Object.values(countsMap).reduce((a, b) => a + b, 0);
+
+    return Object.entries(countsMap)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: total > 0 ? Math.round((value / total) * 100) : 0,
+        color: PRIORITY_COLORS[name] || '#f59e0b',
+      }))
+      .filter((entry) => entry.value > 0);
+  }, [tickets, metrics]);
+
+  // All 4 priority tiers for comprehensive administrative overview cards
+  const allPriorityCards = useMemo(() => {
+    const countsMap = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+    if (tickets.length > 0) {
+      tickets.forEach((t) => {
+        const p = (t.priority || 'MEDIUM').toUpperCase();
+        if (countsMap[p] !== undefined) countsMap[p]++;
+      });
+    } else if (metrics?.priorityDistribution) {
+      metrics.priorityDistribution.forEach((p) => {
+        const key = (p._id || 'MEDIUM').toUpperCase();
+        if (countsMap[key] !== undefined) countsMap[key] = p.count;
+      });
+    }
+
+    const total = Object.values(countsMap).reduce((a, b) => a + b, 0);
+
+    return [
+      { name: 'CRITICAL', label: 'Critical Tier', value: countsMap.CRITICAL, color: PRIORITY_COLORS.CRITICAL, percentage: total > 0 ? Math.round((countsMap.CRITICAL / total) * 100) : 0 },
+      { name: 'HIGH', label: 'High Tier', value: countsMap.HIGH, color: PRIORITY_COLORS.HIGH, percentage: total > 0 ? Math.round((countsMap.HIGH / total) * 100) : 0 },
+      { name: 'MEDIUM', label: 'Medium Tier', value: countsMap.MEDIUM, color: PRIORITY_COLORS.MEDIUM, percentage: total > 0 ? Math.round((countsMap.MEDIUM / total) * 100) : 0 },
+      { name: 'LOW', label: 'Low Tier', value: countsMap.LOW, color: PRIORITY_COLORS.LOW, percentage: total > 0 ? Math.round((countsMap.LOW / total) * 100) : 0 },
+    ];
+  }, [tickets, metrics]);
+
+  const statusChartData = useMemo(() => {
+    const statusMap = {
+      OPEN: 0,
+      ASSIGNED: 0,
+      'IN PROGRESS': 0,
+      'WAITING FOR USER': 0,
+      ESCALATED: 0,
+      RESOLVED: 0,
+      CLOSED: 0,
+      REOPENED: 0,
+    };
+
+    if (tickets.length > 0) {
+      tickets.forEach((t) => {
+        const s = t.status || 'OPEN';
+        statusMap[s] = (statusMap[s] || 0) + 1;
+      });
+    } else if (metrics?.statusDistribution) {
+      metrics.statusDistribution.forEach((s) => {
+        if (s._id) statusMap[s._id] = s.count;
+      });
+    }
+
+    const total = Object.values(statusMap).reduce((a, b) => a + b, 0);
+
+    return Object.entries(statusMap)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: total > 0 ? Math.round((value / total) * 100) : 0,
+        color: STATUS_COLORS[name] || '#f59e0b',
+      }))
+      .filter((entry) => entry.value > 0);
+  }, [tickets, metrics]);
+
+  const categoryChartData = useMemo(() => {
+    const map = {};
+    if (tickets.length > 0) {
+      tickets.forEach((t) => {
+        const c = t.category || 'General';
+        map[c] = (map[c] || 0) + 1;
+      });
+    } else if (metrics?.categoryDistribution) {
+      metrics.categoryDistribution.forEach((c) => {
+        if (c._id) map[c._id] = c.count;
+      });
+    }
+
+    const total = Object.values(map).reduce((a, b) => a + b, 0);
+
+    return Object.entries(map)
+      .map(([name, count], idx) => ({
+        name,
+        count,
+        percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+        color: CATEGORY_PALETTE[idx % CATEGORY_PALETTE.length],
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  }, [tickets, metrics]);
+
+  const departmentChartData = useMemo(() => {
+    const map = {};
+    tickets.forEach((t) => {
+      const d = t.createdBy?.departmentName || t.departmentName || 'General Support';
+      map[d] = (map[d] || 0) + 1;
+    });
+
+    const total = Object.values(map).reduce((a, b) => a + b, 0);
+
+    return Object.entries(map)
+      .map(([name, count], idx) => ({
+        name,
+        count,
+        percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+        color: CATEGORY_PALETTE[(idx + 2) % CATEGORY_PALETTE.length],
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  }, [tickets]);
+
+  const activePieData = pieChartMode === 'priority' ? priorityChartData : statusChartData;
+  const totalPieCount = activePieData.reduce((acc, curr) => acc + curr.value, 0);
+
+  const activeBarData = barChartMode === 'category' ? categoryChartData : departmentChartData;
+  const totalBarCount = activeBarData.reduce((acc, curr) => acc + curr.count, 0);
+
+  const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    if (!percent || percent < 0.06) return null;
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.52;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#ffffff"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={11}
+        fontWeight={800}
+        fontFamily="monospace"
+        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+      >
+        {`${Math.round(percent * 100)}%`}
+      </text>
+    );
+  };
+
+  const CustomPieTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="rounded-2xl border border-amber-300 bg-white/95 p-3.5 shadow-xl backdrop-blur-md text-xs space-y-1 z-50">
+          <div className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: data.color }} />
+            <span className="font-extrabold text-slate-900 text-sm">{data.name}</span>
+          </div>
+          <div className="flex items-baseline gap-2 font-mono">
+            <span className="text-lg font-black text-slate-950">{data.value}</span>
+            <span className="text-slate-600 text-xs font-semibold">({data.percentage}% of total)</span>
+          </div>
+          <p className="text-[10px] text-amber-700 font-semibold pt-0.5">Click slice to filter incident queue →</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomBarTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="rounded-2xl border border-amber-300 bg-white/95 p-3.5 shadow-xl backdrop-blur-md text-xs space-y-1 z-50">
+          <div className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: data.color || '#f59e0b' }} />
+            <span className="font-extrabold text-slate-900 text-sm">{data.name}</span>
+          </div>
+          <div className="flex items-baseline gap-2 font-mono">
+            <span className="text-lg font-black text-slate-950">{data.count}</span>
+            <span className="text-slate-600 text-xs font-semibold">incidents ({data.percentage}%)</span>
+          </div>
+          <p className="text-[10px] text-amber-700 font-semibold pt-0.5">Click bar to filter incident queue →</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Quick count stats for the tickets queue
   const unassignedCount = tickets.filter((t) => !t.assignedTo).length;
@@ -245,17 +552,21 @@ const AdminDashboard = () => {
   const inProgressCount = tickets.filter((t) => t.status === 'IN PROGRESS').length;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
+    <div className="space-y-8">
       {/* Toast Notification */}
       {toastMessage && (
         <div
           className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl px-5 py-3.5 text-xs font-semibold shadow-2xl backdrop-blur-xl border transition-all animate-in fade-in slide-in-from-bottom-5 ${
-            toastMessage.type === 'success'
+            toastMessage.type === 'new_problem'
+              ? 'bg-amber-50 text-amber-950 border-amber-400 shadow-amber-500/25 ring-2 ring-amber-400/50'
+              : toastMessage.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-emerald-200'
               : 'bg-rose-50 text-rose-800 border-rose-300 shadow-rose-200'
           }`}
         >
-          {toastMessage.type === 'success' ? (
+          {toastMessage.type === 'new_problem' ? (
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 animate-bounce" />
+          ) : toastMessage.type === 'success' ? (
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
           ) : (
             <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
@@ -318,7 +629,7 @@ const AdminDashboard = () => {
             setStatusFilter('ALL');
             document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="cursor-pointer rounded-2xl p-4 border border-slate-200 bg-white shadow-sm hover:border-amber-400 transition-all hover:scale-[1.02]"
+          className="cursor-pointer rounded-2xl p-4 border border-slate-200 bg-white shadow-sm hover:border-amber-400 hover:shadow-md transition-all min-h-[105px] shrink-0"
         >
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Volume</span>
           <p className="mt-2 text-2xl font-extrabold text-slate-900 font-mono">{tickets.length || counts.totalTickets || 0}</p>
@@ -330,7 +641,7 @@ const AdminDashboard = () => {
             setStatusFilter('UNASSIGNED');
             document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="cursor-pointer rounded-2xl p-4 border border-amber-300 bg-amber-50/50 shadow-sm hover:border-amber-500 transition-all hover:scale-[1.02]"
+          className="cursor-pointer rounded-2xl p-4 border border-amber-300 bg-amber-50/50 shadow-sm hover:border-amber-500 hover:shadow-md transition-all min-h-[105px] shrink-0"
         >
           <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Unassigned</span>
           <p className="mt-2 text-2xl font-extrabold text-amber-600 font-mono">{unassignedCount}</p>
@@ -342,7 +653,7 @@ const AdminDashboard = () => {
             setStatusFilter('ASSIGNED');
             document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="cursor-pointer rounded-2xl p-4 border border-slate-200 bg-white shadow-sm hover:border-amber-400 transition-all hover:scale-[1.02]"
+          className="cursor-pointer rounded-2xl p-4 border border-slate-200 bg-white shadow-sm hover:border-amber-400 hover:shadow-md transition-all min-h-[105px] shrink-0"
         >
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Assigned</span>
           <p className="mt-2 text-2xl font-extrabold text-slate-900 font-mono">{assignedCount}</p>
@@ -354,14 +665,14 @@ const AdminDashboard = () => {
             setStatusFilter('IN PROGRESS');
             document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="cursor-pointer rounded-2xl p-4 border border-slate-200 bg-white shadow-sm hover:border-amber-400 transition-all hover:scale-[1.02]"
+          className="cursor-pointer rounded-2xl p-4 border border-slate-200 bg-white shadow-sm hover:border-amber-400 hover:shadow-md transition-all min-h-[105px] shrink-0"
         >
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">In Progress</span>
           <p className="mt-2 text-2xl font-extrabold text-amber-600 font-mono">{inProgressCount}</p>
           <span className="text-[10px] text-slate-500 font-medium">Under active triage →</span>
         </div>
 
-        <div className="rounded-2xl p-4 border border-slate-200 bg-white shadow-sm">
+        <div className="rounded-2xl p-4 border border-slate-200 bg-white shadow-sm min-h-[105px] shrink-0">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">SLA Compliance</span>
           <p className="mt-2 text-2xl font-extrabold text-emerald-600 font-mono">
             {counts.slaCompliance || 100}%
@@ -369,13 +680,302 @@ const AdminDashboard = () => {
           <span className="text-[10px] text-slate-500 font-medium">Service target</span>
         </div>
 
-        <div className="rounded-2xl p-4 border border-slate-200 bg-white shadow-sm">
+        <div className="rounded-2xl p-4 border border-slate-200 bg-white shadow-sm min-h-[105px] shrink-0">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">User CSAT</span>
           <div className="mt-2 flex items-baseline gap-1 font-mono">
             <span className="text-2xl font-extrabold text-amber-500">{counts.avgCSAT || '5.0'}</span>
             <span className="text-xs text-slate-400 font-bold">/ 5.0</span>
           </div>
           <span className="text-[10px] text-slate-500 font-medium">Satisfaction score</span>
+        </div>
+      </div>
+
+      {/* EXECUTIVE OPERATIONAL ANALYTICS: INTERACTIVE PIE CHART & BAR CHART */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-800 border border-amber-300 shadow-sm">
+              <BarChart2 className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
+                Live Incident Analytics & Breakdown
+              </h2>
+              <p className="text-xs text-slate-500">
+                Visualizing severity distribution, lifecycle volume, and classification metrics
+              </p>
+            </div>
+          </div>
+          <span className="self-start sm:self-center rounded-full bg-amber-50 border border-amber-300 px-3 py-1 text-[11px] font-bold text-amber-900 font-mono shadow-sm">
+            Live Synchronized ({tickets.length} Incidents)
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 1. EFFICIENT PIE / DONUT CHART */}
+          <div className="min-w-0 rounded-3xl p-6 border border-slate-200 bg-white shadow-md flex flex-col justify-between hover:border-amber-300 transition-all">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
+                    <PieChartIcon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                      {pieChartMode === 'priority' ? 'Incident Severity & Priority' : 'Incident Lifecycle Status'}
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      {pieChartMode === 'priority' ? 'Critical vs. Standard SLA tiers' : 'Active vs. Solved tickets breakdown'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Mode Selector Toggle */}
+                <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPieChartMode('priority')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
+                      pieChartMode === 'priority'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Priority
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPieChartMode('status')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
+                      pieChartMode === 'status'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Status
+                  </button>
+                </div>
+              </div>
+
+              {/* Chart Visual with Centered Donut Metric */}
+              <div className="relative w-full h-72 min-w-0">
+                {activePieData.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-6 text-slate-400">
+                    <Inbox className="h-8 w-8 mb-2 opacity-50" />
+                    <span className="text-xs font-semibold">No incident data recorded yet</span>
+                  </div>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                        <Pie
+                          key={`pie-${pieChartMode}`}
+                          data={activePieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={65}
+                          outerRadius={98}
+                          paddingAngle={activePieData.length > 1 ? 4 : 0}
+                          dataKey="value"
+                          nameKey="name"
+                          label={renderCustomizedPieLabel}
+                          labelLine={false}
+                          onClick={(entry) => {
+                            if (pieChartMode === 'priority' && entry?.name) {
+                              setPriorityFilter(entry.name);
+                              document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
+                            } else if (pieChartMode === 'status' && entry?.name) {
+                              setStatusFilter(entry.name);
+                              document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }}
+                          className="cursor-pointer focus:outline-none"
+                        >
+                          {activePieData.map((entry, index) => (
+                            <Cell
+                              key={`pie-cell-${entry.name}-${index}`}
+                              fill={entry.color}
+                              stroke="#ffffff"
+                              strokeWidth={3}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomPieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+
+                    {/* Donut Center Metric */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-3xl font-black text-slate-950 font-mono tracking-tight leading-none">
+                        {totalPieCount}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+                        {pieChartMode === 'priority' ? 'Total Incidents' : 'Status Total'}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Custom Interactive Legend Badges */}
+            <div className="border-t border-slate-100 pt-4 mt-2">
+              {pieChartMode === 'priority' ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {allPriorityCards.map((tier) => (
+                    <button
+                      key={tier.name}
+                      type="button"
+                      onClick={() => {
+                        setPriorityFilter(tier.name);
+                        document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="flex flex-col items-start p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50/70 hover:bg-amber-50/50 transition-all text-left cursor-pointer group"
+                      title={`Filter by ${tier.name}`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: tier.color }} />
+                        <span className="text-[11px] font-bold text-slate-800 group-hover:text-amber-900">{tier.name}</span>
+                      </div>
+                      <div className="flex items-baseline gap-1.5 font-mono">
+                        <span className="text-sm font-extrabold text-slate-900">{tier.value}</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">({tier.percentage}%)</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {activePieData.map((entry) => (
+                    <button
+                      key={entry.name}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(entry.name);
+                        document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50/70 hover:bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-all cursor-pointer group"
+                      title={`Click to filter queue by ${entry.name}`}
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: entry.color }} />
+                      <span className="font-bold text-slate-900 group-hover:text-amber-800">{entry.name}</span>
+                      <span className="rounded-md bg-white border border-slate-200 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-700">
+                        {entry.value} ({entry.percentage}%)
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. EFFICIENT BAR CHART */}
+          <div className="min-w-0 rounded-3xl p-6 border border-slate-200 bg-white shadow-md flex flex-col justify-between hover:border-amber-300 transition-all">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
+                    <BarChart2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                      {barChartMode === 'category' ? 'Incidents by Category' : 'Incidents by Department'}
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      {barChartMode === 'category' ? 'Volume distribution across IT categories' : 'Request volume per corporate department'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Mode Selector Toggle */}
+                <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setBarChartMode('category')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
+                      barChartMode === 'category'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Category
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBarChartMode('department')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition-all ${
+                      barChartMode === 'department'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Department
+                  </button>
+                </div>
+              </div>
+
+              {/* Bar Chart Visual */}
+              <div className="w-full h-72 min-w-0">
+                {activeBarData.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-6 text-slate-400">
+                    <Inbox className="h-8 w-8 mb-2 opacity-50" />
+                    <span className="text-xs font-semibold">No category volume data available</span>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart
+                      key={`bar-${barChartMode}`}
+                      data={activeBarData}
+                      margin={{ top: 22, right: 15, left: -5, bottom: 45 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis
+                        dataKey="name"
+                        stroke="#64748b"
+                        fontSize={11}
+                        fontWeight={600}
+                        angle={-20}
+                        textAnchor="end"
+                        interval={0}
+                        height={45}
+                        dy={6}
+                        tickFormatter={(val) => (val && val.length > 14 ? `${val.substring(0, 12)}...` : val)}
+                      />
+                      <YAxis stroke="#64748b" fontSize={11} allowDecimals={false} width={30} />
+                      <Tooltip content={<CustomBarTooltip />} />
+                      <Bar
+                        dataKey="count"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={48}
+                        onClick={(entry) => {
+                          if (entry?.name) {
+                            setSearchQuery(entry.name);
+                            document.getElementById('incident-queue-section')?.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <LabelList dataKey="count" position="top" fill="#1e293b" fontSize={11} fontWeight={700} offset={6} />
+                        {activeBarData.map((entry, index) => (
+                          <Cell key={`bar-cell-${entry.name}-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* Quick summary footer for Bar chart */}
+            <div className="border-t border-slate-100 pt-4 mt-2 flex flex-wrap items-center justify-between text-xs text-slate-500">
+              <span className="font-medium">
+                Active Categories / Divisions: <strong className="text-slate-900 font-bold">{activeBarData.length}</strong>
+              </span>
+              <span className="text-[11px] text-amber-700 font-semibold">
+                Click any bar to filter queue table →
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -619,6 +1219,36 @@ const AdminDashboard = () => {
                             </button>
                           )}
                         </div>
+
+                        {/* Display Problem Done & Verified Solution */}
+                        {(['RESOLVED', 'CLOSED'].includes(ticket.status) || ticket.resolutionNotes || ticket.solution) && (
+                          <div className="mt-2.5 rounded-2xl border border-emerald-300 bg-emerald-50/95 p-3.5 shadow-sm space-y-1.5 ring-1 ring-emerald-400/40 animate-in fade-in duration-200">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 text-xs font-black text-emerald-900">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                                <span>Problem Done • Assigned Task Completed</span>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
+                                {ticket.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-emerald-950 font-medium whitespace-pre-wrap leading-relaxed">
+                              <span className="font-bold text-emerald-800">Assigned Solution: </span>
+                              {ticket.resolutionNotes || ticket.solution || 'Verified & marked as solved.'}
+                            </p>
+                            {ticket.resolvedAt && (
+                              <div className="text-[10px] font-mono text-emerald-700 pt-0.5">
+                                Completed At: {new Date(ticket.resolvedAt).toLocaleDateString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {ticket.attachments?.length > 0 && (
                           <div className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-amber-800 font-mono bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                             <Paperclip className="h-2.5 w-2.5 text-amber-600" />
@@ -716,7 +1346,36 @@ const AdminDashboard = () => {
 
                       {/* Action Button */}
                       <td className="px-4 py-4 align-top text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5">
+                        <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+                          {/* Complete & Solve Problem / Edit Solution Button */}
+                          {!['RESOLVED', 'CLOSED'].includes(ticket.status) ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setResolvingTicket(ticket);
+                                setResolutionNotes(ticket.resolutionNotes || ticket.solution || '');
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold px-3 py-1.5 text-xs transition-all shadow-sm shadow-emerald-600/20"
+                              title="Mark as complete and record solution"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <span>Complete / Solve</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setResolvingTicket(ticket);
+                                setResolutionNotes(ticket.resolutionNotes || ticket.solution || '');
+                              }}
+                              className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-2.5 py-1.5 text-xs font-bold transition-colors shadow-sm"
+                              title="Update or expand written solution"
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>Task Done • Edit</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => downloadTicketPDF(ticket)}
@@ -741,101 +1400,6 @@ const AdminDashboard = () => {
               </tbody>
             </table>
           )}
-        </div>
-      </div>
-
-      {/* Analytics Charts Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Category Breakdown Bar Chart */}
-        <div className="rounded-3xl p-6 border border-slate-200 bg-white shadow-md">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Incidents by Classification Category
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Volume distribution across IT services</p>
-            </div>
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 font-mono border border-amber-300">
-              Live Aggregate
-            </span>
-          </div>
-
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categoryData} margin={{ top: 10, right: 10, left: -20, bottom: 25 }}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  angle={-25}
-                  textAnchor="end"
-                  interval={0}
-                />
-                <YAxis stroke="#94a3b8" fontSize={11} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#ffffff',
-                    borderColor: '#f59e0b',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    color: '#0f172a',
-                    boxShadow: '0 10px 25px -5px rgba(245,158,11,0.2)',
-                  }}
-                />
-                <Bar dataKey="count" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Priority Breakdown Pie Chart */}
-        <div className="rounded-3xl p-6 border border-slate-200 bg-white shadow-md">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Incidents by Severity & Priority
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Critical vs. Standard SLA tiers</p>
-            </div>
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 font-mono border border-amber-300">
-              Active Tiers
-            </span>
-          </div>
-
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={priorityData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={65}
-                  outerRadius={95}
-                  paddingAngle={6}
-                  dataKey="value"
-                >
-                  {priorityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#ffffff',
-                    borderColor: '#f59e0b',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    color: '#0f172a',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
-                  }}
-                />
-                <Legend
-                  verticalAlign="bottom"
-                  height={36}
-                  wrapperStyle={{ fontSize: '11px', color: '#64748b' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
         </div>
       </div>
 
@@ -892,6 +1456,145 @@ const AdminDashboard = () => {
           ))}
         </div>
       </div>
+
+      {/* Complete & Solve Problem / Resolution Modal */}
+      {resolvingTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="relative w-full max-w-2xl rounded-3xl border border-emerald-300/80 bg-white p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700 shadow-sm shrink-0">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    Assign Solution & Mark Problem Done
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Record verified resolution notes. The assigned task will immediately show as completed.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setResolvingTicket(null);
+                  setResolutionNotes('');
+                }}
+                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Incident Context Overview */}
+            <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-4 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-black text-amber-900 bg-amber-200/70 px-2 py-0.5 rounded-lg border border-amber-300">
+                    {resolvingTicket.ticketNumber}
+                  </span>
+                  <PriorityBadge priority={resolvingTicket.priority} size="xs" />
+                  <span className="rounded-md bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-amber-200">
+                    {resolvingTicket.category}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-600 font-semibold">
+                  Submitted by: <strong className="text-slate-900">{resolvingTicket.createdBy?.name || 'Employee'}</strong>
+                </div>
+              </div>
+
+              <h4 className="text-sm font-bold text-slate-900">{resolvingTicket.title}</h4>
+              <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                {resolvingTicket.description}
+              </p>
+
+              {resolvingTicket.assignedTo && (
+                <div className="pt-1 flex items-center gap-1.5 text-xs text-emerald-800 font-medium border-t border-amber-200/60 mt-2">
+                  <UserCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span>
+                    Current Assignee: <strong className="text-slate-950 font-bold">{resolvingTicket.assignedTo.name}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Resolution Templates */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span>⚡ Quick Resolution Presets (1-Click Fill)</span>
+                <span className="text-[10px] text-slate-400 font-normal">Click to insert template</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  'Diagnostic completed: root cause resolved and verified working with employee.',
+                  'Software update and configuration patch successfully applied and tested.',
+                  'Credentials and user account permissions reset; employee confirmed access.',
+                  'Network routing and connectivity parameters restored and verified.',
+                  'Hardware component inspected and repaired; full diagnostic passed.',
+                ].map((tpl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setResolutionNotes(tpl)}
+                    className="text-left text-[11px] font-medium bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 hover:border-emerald-300 rounded-xl px-2.5 py-1.5 transition-all shadow-sm active:scale-95"
+                  >
+                    • {tpl.slice(0, 48)}...
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleCompleteAndSolve} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-slate-900 flex items-center justify-between">
+                  <span>Verified Solution & Action Taken *</span>
+                  <span className="text-[10px] text-emerald-700 font-mono font-bold">Visible to Employee & Support Team</span>
+                </label>
+                <textarea
+                  rows={4}
+                  value={resolutionNotes}
+                  onChange={(e) => setResolutionNotes(e.target.value)}
+                  placeholder="Provide clear technical details: explain how the problem was resolved, root cause eliminated, and operational status confirmed..."
+                  className="w-full rounded-2xl border border-slate-300 p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all font-sans"
+                  required
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResolvingTicket(null);
+                    setResolutionNotes('');
+                  }}
+                  className="rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingResolution || !resolutionNotes.trim()}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 active:scale-95"
+                >
+                  {isSubmittingResolution ? (
+                    <RefreshCw className="h-4 w-4 animate-spin text-white" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  )}
+                  <span>Confirm Solution & Mark Done</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

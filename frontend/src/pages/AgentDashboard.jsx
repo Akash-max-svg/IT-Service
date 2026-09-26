@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { ticketAPI, getSocket } from '../services/api';
@@ -42,15 +42,15 @@ const AgentDashboard = () => {
   const [isSubmittingResolution, setIsSubmittingResolution] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       const { data } = await ticketAPI.getTickets({ limit: 100 });
       setTickets(data.tickets || []);
     } catch (err) {
       console.error('Error fetching tickets', err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
@@ -59,30 +59,69 @@ const AgentDashboard = () => {
 
     const socket = getSocket();
     const handleUpdate = () => {
-      fetchTickets();
+      fetchTickets(true);
     };
 
     socket.on('new_ticket', handleUpdate);
     socket.on('ticket_escalated', handleUpdate);
     socket.on('ticket_updated', handleUpdate);
     socket.on('ticket_reopened', handleUpdate);
-    socket.on('notification', handleUpdate);
+    socket.on('notification', (notif) => {
+      fetchTickets(true);
+      if (notif?.type === 'ASSIGNED') {
+        setToastMessage({
+          type: 'assigned',
+          text: `🎯 New Incident Assigned: ${notif.title || ''} - ${notif.message || ''}`,
+        });
+        setTimeout(() => setToastMessage(null), 7000);
+      }
+    });
+
+    socket.on('ticket_assigned', (data) => {
+      fetchTickets(true);
+      const myId = (user?._id || user?.id)?.toString();
+      if (data?.assignedTo?._id === myId || data?.agentId === myId) {
+        setToastMessage({
+          type: 'assigned',
+          text: `🎯 Administrator assigned incident [${data.ticketNumber}] "${data.title}" to you for immediate resolution!`,
+        });
+        setTimeout(() => setToastMessage(null), 7000);
+      }
+    });
 
     return () => {
       socket.off('new_ticket', handleUpdate);
       socket.off('ticket_escalated', handleUpdate);
       socket.off('ticket_updated', handleUpdate);
       socket.off('ticket_reopened', handleUpdate);
-      socket.off('notification', handleUpdate);
+      socket.off('notification');
+      socket.off('ticket_assigned');
     };
-  }, []);
+  }, [user]);
 
   const currentUserId = (user?._id || user?.id)?.toString();
-  const isAssignedToUser = (t) => (t.assignedTo?._id || t.assignedTo)?.toString() === currentUserId;
+  const isAssignedToUser = (t) => {
+    if (!t) return false;
+    const assignedId = (t.assignedTo?._id || t.assignedTo)?.toString();
+    return Boolean(assignedId && currentUserId && assignedId === currentUserId);
+  };
 
-  const myAssignedTickets = tickets.filter(
-    (t) => isAssignedToUser(t) && !['RESOLVED', 'CLOSED'].includes(t.status)
-  );
+  // Keep all assigned tickets (active problems first, then resolved problems)
+  const myAssignedTickets = useMemo(() => {
+    return tickets
+      .filter((t) => isAssignedToUser(t))
+      .sort((a, b) => {
+        const aDone = ['RESOLVED', 'CLOSED'].includes(a.status);
+        const bDone = ['RESOLVED', 'CLOSED'].includes(b.status);
+        if (aDone && !bDone) return 1;
+        if (!aDone && bDone) return -1;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+  }, [tickets, user]);
+
+  const myActiveCount = myAssignedTickets.filter(
+    (t) => !['RESOLVED', 'CLOSED'].includes(t.status)
+  ).length;
 
   const unassignedTickets = tickets.filter(
     (t) => !t.assignedTo && ['OPEN', 'REOPENED'].includes(t.status)
@@ -137,11 +176,11 @@ const AgentDashboard = () => {
       await ticketAPI.assignTicket(ticketId, user._id);
       setToastMessage({ type: 'success', text: 'Ticket successfully claimed and assigned to your queue!' });
       setTimeout(() => setToastMessage(null), 4000);
-      fetchTickets();
+      fetchTickets(true);
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.message || 'Failed to claim ticket' });
       setTimeout(() => setToastMessage(null), 4000);
-      fetchTickets();
+      fetchTickets(true);
     }
   };
 
@@ -160,56 +199,73 @@ const AgentDashboard = () => {
       await ticketAPI.updateStatus(ticketId, { status: 'IN PROGRESS' });
       setToastMessage({ type: 'success', text: 'Status changed to IN PROGRESS. Work started!' });
       setTimeout(() => setToastMessage(null), 4000);
-      fetchTickets();
+      fetchTickets(true);
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.message || 'Failed to start diagnostic' });
       setTimeout(() => setToastMessage(null), 4000);
-      fetchTickets();
+      fetchTickets(true);
     }
   };
 
   const handleCompleteAndSolve = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!resolvingTicket) return;
-    if (!resolutionNotes.trim()) {
-      alert('Please enter resolution notes describing how the problem was solved.');
+    const cleanSolution = (resolutionNotes || '').trim();
+    if (!cleanSolution) {
+      alert('Please enter or select resolution notes describing how the problem was solved.');
       return;
     }
 
+    const currentTicket = resolvingTicket;
+    const nowIso = new Date().toISOString();
+
+    // Close modal right away so user sees immediate reaction in queue
+    setResolvingTicket(null);
+    setResolutionNotes('');
+
+    // Immediately optimistically update local state across the project
+    setTickets((prev) =>
+      prev.map((t) =>
+        t._id === currentTicket._id
+          ? {
+              ...t,
+              status: 'RESOLVED',
+              assignedTo: t.assignedTo || user,
+              resolutionNotes: cleanSolution,
+              solution: cleanSolution,
+              resolvedAt: t.resolvedAt || nowIso,
+            }
+          : t
+      )
+    );
+
+    // Show immediate affirmative toast
+    setToastMessage({
+      type: 'success',
+      text: `✅ Problem Done • Your assigned task is completed! Incident [${currentTicket.ticketNumber}] marked as RESOLVED and solution notification sent to employee.`,
+    });
+    setTimeout(() => setToastMessage(null), 6000);
+
     try {
       setIsSubmittingResolution(true);
-      // Immediately update local state across the project
-      setTickets((prev) =>
-        prev.map((t) =>
-          t._id === resolvingTicket._id
-            ? {
-                ...t,
-                status: 'RESOLVED',
-                resolutionNotes: resolutionNotes.trim(),
-                resolvedAt: new Date().toISOString(),
-              }
-            : t
-        )
-      );
-      await ticketAPI.updateStatus(resolvingTicket._id, {
+      const { data: updated } = await ticketAPI.updateStatus(currentTicket._id, {
         status: 'RESOLVED',
-        resolutionNotes: resolutionNotes.trim(),
+        resolutionNotes: cleanSolution,
+        solution: cleanSolution,
       });
-      setToastMessage({
-        type: 'success',
-        text: `Incident ${resolvingTicket.ticketNumber} marked as SOLVED & RESOLVED!`,
-      });
-      setTimeout(() => setToastMessage(null), 4500);
-      setResolvingTicket(null);
-      setResolutionNotes('');
-      fetchTickets();
+
+      if (updated) {
+        setTickets((prev) =>
+          prev.map((t) => (t._id === updated._id ? { ...t, ...updated } : t))
+        );
+      }
     } catch (err) {
       setToastMessage({
         type: 'error',
         text: err.response?.data?.message || 'Failed to mark ticket as resolved',
       });
-      setTimeout(() => setToastMessage(null), 4000);
-      fetchTickets();
+      setTimeout(() => setToastMessage(null), 4500);
+      fetchTickets(true);
     } finally {
       setIsSubmittingResolution(false);
     }
@@ -218,17 +274,21 @@ const AgentDashboard = () => {
   const filteredTickets = getFilteredTickets();
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
+    <div className="space-y-8">
       {/* Toast Notification */}
       {toastMessage && (
         <div
           className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl px-5 py-3.5 text-xs font-semibold shadow-2xl backdrop-blur-xl border transition-all animate-in fade-in slide-in-from-bottom-5 ${
-            toastMessage.type === 'success'
+            toastMessage.type === 'assigned'
+              ? 'bg-amber-50 text-amber-950 border-amber-400 shadow-amber-500/25 ring-2 ring-amber-400/50'
+              : toastMessage.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-emerald-200'
               : 'bg-rose-50 text-rose-800 border-rose-300 shadow-rose-200'
           }`}
         >
-          {toastMessage.type === 'success' ? (
+          {toastMessage.type === 'assigned' ? (
+            <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0 animate-bounce" />
+          ) : toastMessage.type === 'success' ? (
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
           ) : (
             <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
@@ -274,7 +334,7 @@ const AgentDashboard = () => {
         {/* My Assigned */}
         <div
           onClick={() => setActiveQueueTab('my-assigned')}
-          className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 bg-white shadow-sm ${
+          className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 bg-white shadow-sm min-h-[125px] shrink-0 ${
             activeQueueTab === 'my-assigned'
               ? 'border-amber-500 ring-2 ring-amber-400/50 bg-amber-50/40 shadow-amber-200'
               : 'border-slate-200 hover:border-amber-300'
@@ -296,7 +356,7 @@ const AgentDashboard = () => {
         {/* Unassigned Pool */}
         <div
           onClick={() => setActiveQueueTab('unassigned')}
-          className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 bg-white shadow-sm ${
+          className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 bg-white shadow-sm min-h-[125px] shrink-0 ${
             activeQueueTab === 'unassigned'
               ? 'border-amber-500 ring-2 ring-amber-400/50 bg-amber-50/40 shadow-amber-200'
               : 'border-slate-200 hover:border-amber-300'
@@ -318,7 +378,7 @@ const AgentDashboard = () => {
         {/* SLA Breached */}
         <div
           onClick={() => setActiveQueueTab('breached')}
-          className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 bg-white shadow-sm ${
+          className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 bg-white shadow-sm min-h-[125px] shrink-0 ${
             activeQueueTab === 'breached'
               ? 'border-rose-500 ring-2 ring-rose-400/50 bg-rose-50/40 shadow-rose-200'
               : 'border-slate-200 hover:border-rose-300'
@@ -340,7 +400,7 @@ const AgentDashboard = () => {
         {/* Resolved By Me */}
         <div
           onClick={() => setActiveQueueTab('resolved')}
-          className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 bg-white shadow-sm ${
+          className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 bg-white shadow-sm min-h-[125px] shrink-0 ${
             activeQueueTab === 'resolved'
               ? 'border-emerald-500 ring-2 ring-emerald-400/50 bg-emerald-50/40 shadow-emerald-200'
               : 'border-slate-200 hover:border-emerald-300'
@@ -485,6 +545,35 @@ const AgentDashboard = () => {
                       {ticket.description}
                     </p>
 
+                    {/* Display Problem Done & Verified Solution */}
+                    {(['RESOLVED', 'CLOSED'].includes(ticket.status) || ticket.resolutionNotes || ticket.solution) && (
+                      <div className="mt-2.5 rounded-2xl border border-emerald-300 bg-emerald-50/95 p-3.5 shadow-sm space-y-1.5 ring-1 ring-emerald-400/40 animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-xs font-black text-emerald-900">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                            <span>Problem Done • Assigned Task Completed</span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
+                            {ticket.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-emerald-950 font-medium whitespace-pre-wrap leading-relaxed">
+                          <span className="font-bold text-emerald-800">Assigned Solution: </span>
+                          {ticket.resolutionNotes || ticket.solution || 'Verified & marked as solved.'}
+                        </p>
+                        {ticket.resolvedAt && (
+                          <div className="text-[10px] font-mono text-emerald-700 pt-0.5">
+                            Completed At: {new Date(ticket.resolvedAt).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Employee & SLA Footer */}
                     <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 pt-1">
                       <div className="flex items-center gap-1.5 font-medium text-slate-700">
@@ -540,7 +629,7 @@ const AgentDashboard = () => {
                         className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3.5 py-2 text-xs transition-colors shadow-sm"
                       >
                         <UserCheck className="h-3.5 w-3.5" />
-                        <span>Claim & Solve</span>
+                        <span>Claim</span>
                       </button>
                     )}
 
@@ -556,27 +645,42 @@ const AgentDashboard = () => {
                       </button>
                     )}
 
-                    {/* Complete & Solve Problem Button */}
-                    {isAssigned && !isResolved && (
+                    {/* Complete & Solve Problem Button (Available for all active tickets) */}
+                    {!isResolved && (
                       <button
                         type="button"
                         onClick={() => {
                           setResolvingTicket(ticket);
-                          setResolutionNotes('');
+                          setResolutionNotes(ticket.resolutionNotes || ticket.solution || '');
                         }}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold px-4 py-2 text-xs transition-all shadow-md shadow-amber-500/20"
+                        title="Mark as complete and record solution"
                       >
                         <CheckCircle2 className="h-4 w-4 text-slate-950" />
                         <span>Complete / Solve</span>
                       </button>
                     )}
 
-                    {/* Already Resolved indicator */}
+                    {/* Already Resolved indicator and Update Solution Button */}
                     {isResolved && (
-                      <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 px-3.5 py-2 text-xs font-bold">
-                        <CheckCircle className="h-4 w-4 text-emerald-600" />
-                        <span>Solved</span>
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 px-3 py-1.5 text-xs font-bold shadow-sm">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <span>Task Done</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResolvingTicket(ticket);
+                            setResolutionNotes(ticket.resolutionNotes || ticket.solution || '');
+                          }}
+                          className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 px-2.5 py-1.5 text-xs font-bold transition-colors shadow-sm"
+                          title="Update or expand written solution"
+                        >
+                          <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Edit Solution</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -588,64 +692,129 @@ const AgentDashboard = () => {
 
       {/* Complete & Solve Problem Modal */}
       {resolvingTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-lg rounded-3xl bg-white border border-amber-200 p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2 text-amber-600 font-bold text-sm">
-                <CheckCircle2 className="h-5 w-5 text-amber-500" />
-                <span>Complete & Solve Problem</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="relative w-full max-w-2xl rounded-3xl border border-emerald-300/80 bg-white p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700 shadow-sm shrink-0">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    {['RESOLVED', 'CLOSED'].includes(resolvingTicket.status)
+                      ? 'Update Verified Solution'
+                      : 'Assign Solution & Complete Problem'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Record verified technical resolution notes. The employee will receive an immediate notification.
+                  </p>
+                </div>
               </div>
               <button
-                onClick={() => setResolvingTicket(null)}
-                className="p-1 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                type="button"
+                onClick={() => {
+                  setResolvingTicket(null);
+                  setResolutionNotes('');
+                }}
+                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="space-y-1">
-              <span className="font-mono text-xs font-bold text-amber-600">
-                {resolvingTicket.ticketNumber}
-              </span>
-              <h4 className="text-base font-bold text-slate-900 leading-snug">
-                {resolvingTicket.title}
-              </h4>
-              <p className="text-xs text-slate-500">
-                Provide clear resolution notes detailing what steps and fixes were completed to solve this employee issue.
+            {/* Incident Context Overview */}
+            <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-4 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-black text-amber-900 bg-amber-200/70 px-2 py-0.5 rounded-lg border border-amber-300">
+                    {resolvingTicket.ticketNumber}
+                  </span>
+                  <PriorityBadge priority={resolvingTicket.priority} size="xs" />
+                  <span className="rounded-md bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-amber-200">
+                    {resolvingTicket.category}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-600 font-semibold">
+                  Submitted by: <strong className="text-slate-900">{resolvingTicket.createdBy?.name || 'Employee'}</strong>
+                </div>
+              </div>
+
+              <h4 className="text-sm font-bold text-slate-900">{resolvingTicket.title}</h4>
+              <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                {resolvingTicket.description}
               </p>
             </div>
 
+            {/* Quick Resolution Templates */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span>⚡ Quick Resolution Presets (1-Click Fill)</span>
+                <span className="text-[10px] text-slate-400 font-normal">Click to insert template</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  'Diagnostic completed: root cause resolved and verified working with employee.',
+                  'Software update and configuration patch successfully applied and tested.',
+                  'Credentials and user account permissions reset; employee confirmed access.',
+                  'Network routing and connectivity parameters restored and verified.',
+                  'Hardware component inspected and repaired; full diagnostic passed.',
+                ].map((tpl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setResolutionNotes(tpl)}
+                    className="text-left text-[11px] font-medium bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 hover:border-emerald-300 rounded-xl px-2.5 py-1.5 transition-all shadow-sm active:scale-95"
+                  >
+                    • {tpl.slice(0, 48)}...
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Form */}
             <form onSubmit={handleCompleteAndSolve} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Resolution Notes / Solution Summary *
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-slate-900 flex items-center justify-between">
+                  <span>Verified Solution & Action Taken *</span>
+                  <span className="text-[10px] text-emerald-700 font-mono font-bold">Sent to Employee & Support Log</span>
                 </label>
                 <textarea
                   rows={4}
                   required
                   value={resolutionNotes}
                   onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="E.g., Cleared corrupted DNS cache, re-authenticated domain credentials, and confirmed with the employee that network connectivity is fully restored."
-                  className="w-full rounded-2xl border border-slate-300 p-3 text-xs text-slate-900 placeholder-slate-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  placeholder="Provide clear technical details: explain how the problem was resolved, root cause eliminated, and employee verification completed..."
+                  className="w-full rounded-2xl border border-slate-300 p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all font-sans"
                 />
               </div>
 
+              {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setResolvingTicket(null)}
-                  disabled={isSubmittingResolution}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                  onClick={() => {
+                    setResolvingTicket(null);
+                    setResolutionNotes('');
+                  }}
+                  className="rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingResolution}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 disabled:opacity-50 transition-all"
+                  disabled={isSubmittingResolution || !resolutionNotes.trim()}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 active:scale-95"
                 >
-                  <Check className="h-4 w-4 text-slate-950" />
-                  <span>{isSubmittingResolution ? 'Submitting Solution...' : 'Mark as Solved & Resolved'}</span>
+                  <CheckCircle2 className="h-4 w-4 text-white" />
+                  <span>
+                    {['RESOLVED', 'CLOSED'].includes(resolvingTicket.status)
+                      ? 'Save Updated Solution'
+                      : 'Confirm Solution & Mark Done'}
+                  </span>
                 </button>
               </div>
             </form>

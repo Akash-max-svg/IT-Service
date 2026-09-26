@@ -49,8 +49,10 @@ const Dashboard = () => {
     };
 
     socket.on('notification', handleUpdate);
+    socket.on('ticket_updated', handleUpdate);
     return () => {
       socket.off('notification', handleUpdate);
+      socket.off('ticket_updated', handleUpdate);
     };
   }, []);
 
@@ -69,7 +71,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
+    <div className="space-y-8">
       {/* Hero Welcome Banner - White with Gold Accents */}
       <div className="relative overflow-hidden rounded-3xl border border-amber-300/80 bg-white p-6 sm:p-8 shadow-md">
         <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
@@ -92,7 +94,7 @@ const Dashboard = () => {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => navigate('/create-ticket')}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 px-5 py-3 text-xs font-extrabold text-slate-950 shadow-md shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 px-5 py-3 text-xs font-extrabold text-slate-950 shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all"
             >
               <PlusCircle className="h-4 w-4" />
               <span>File a Complaint</span>
@@ -111,7 +113,7 @@ const Dashboard = () => {
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Incidents */}
-        <div className="rounded-2xl p-5 border border-slate-200 bg-white shadow-sm hover:border-amber-300 transition-all">
+        <div className="rounded-2xl p-5 border border-slate-200 bg-white shadow-sm hover:border-amber-300 transition-all min-h-[128px] shrink-0">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Requests</span>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 border border-amber-300">
@@ -126,7 +128,7 @@ const Dashboard = () => {
         </div>
 
         {/* Active Incidents */}
-        <div className="rounded-2xl p-5 border border-amber-300 bg-amber-50/40 shadow-sm hover:border-amber-500 transition-all">
+        <div className="rounded-2xl p-5 border border-amber-300 bg-amber-50/40 shadow-sm hover:border-amber-500 transition-all min-h-[128px] shrink-0">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-800">Under Review</span>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-200 text-amber-800 border border-amber-300">
@@ -141,7 +143,7 @@ const Dashboard = () => {
         </div>
 
         {/* Resolved / Closed */}
-        <div className="rounded-2xl p-5 border border-slate-200 bg-white shadow-sm hover:border-emerald-300 transition-all">
+        <div className="rounded-2xl p-5 border border-slate-200 bg-white shadow-sm hover:border-emerald-300 transition-all min-h-[128px] shrink-0">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Resolved</span>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 border border-emerald-300">
@@ -156,7 +158,7 @@ const Dashboard = () => {
         </div>
 
         {/* Critical Outages */}
-        <div className="rounded-2xl p-5 border border-slate-200 bg-white shadow-sm hover:border-rose-300 transition-all">
+        <div className="rounded-2xl p-5 border border-slate-200 bg-white shadow-sm hover:border-rose-300 transition-all min-h-[128px] shrink-0">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Urgent P1</span>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-700 border border-rose-300">
@@ -188,7 +190,7 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6 text-center text-xs">
-          <div className="rounded-2xl border border-amber-300 bg-amber-50/60 p-3.5 flex flex-col justify-between">
+          <div className="rounded-2xl border border-amber-300 bg-amber-50/60 p-3.5 flex flex-col justify-between shrink-0 min-h-[110px]">
             <div className="flex justify-center mb-2">
               <span className="h-6 w-6 rounded-full bg-amber-200 text-amber-800 font-bold flex items-center justify-center text-xs">
                 1
@@ -198,7 +200,7 @@ const Dashboard = () => {
             <div className="text-[11px] text-slate-500 mt-1">Logged with priority</div>
           </div>
 
-          <div className="rounded-2xl border border-amber-300 bg-amber-50/60 p-3.5 flex flex-col justify-between">
+          <div className="rounded-2xl border border-amber-300 bg-amber-50/60 p-3.5 flex flex-col justify-between shrink-0 min-h-[110px]">
             <div className="flex justify-center mb-2">
               <span className="h-6 w-6 rounded-full bg-amber-200 text-amber-800 font-bold flex items-center justify-center text-xs">
                 2
@@ -208,7 +210,7 @@ const Dashboard = () => {
             <div className="text-[11px] text-slate-500 mt-1">Admin assigns agent</div>
           </div>
 
-          <div className="rounded-2xl border border-amber-400 bg-amber-100/60 p-3.5 flex flex-col justify-between">
+          <div className="rounded-2xl border border-amber-400 bg-amber-100/60 p-3.5 flex flex-col justify-between shrink-0 min-h-[110px]">
             <div className="flex justify-center mb-2">
               <span className="h-6 w-6 rounded-full bg-amber-300 text-amber-900 font-bold flex items-center justify-center text-xs">
                 3
@@ -218,7 +220,7 @@ const Dashboard = () => {
             <div className="text-[11px] text-slate-500 mt-1">Agent diagnoses problem</div>
           </div>
 
-          <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-3.5 flex flex-col justify-between">
+          <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-3.5 flex flex-col justify-between shrink-0 min-h-[110px]">
             <div className="flex justify-center mb-2">
               <span className="h-6 w-6 rounded-full bg-purple-200 text-purple-800 font-bold flex items-center justify-center text-xs">
                 4
@@ -228,7 +230,7 @@ const Dashboard = () => {
             <div className="text-[11px] text-slate-500 mt-1">User input or Tier-2</div>
           </div>
 
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3.5 flex flex-col justify-between">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3.5 flex flex-col justify-between shrink-0 min-h-[110px]">
             <div className="flex justify-center mb-2">
               <span className="h-6 w-6 rounded-full bg-emerald-200 text-emerald-800 font-bold flex items-center justify-center text-xs">
                 5
@@ -238,7 +240,7 @@ const Dashboard = () => {
             <div className="text-[11px] text-slate-500 mt-1">Agent solves problem</div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 flex flex-col justify-between">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 flex flex-col justify-between shrink-0 min-h-[110px]">
             <div className="flex justify-center mb-2">
               <span className="h-6 w-6 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs">
                 6

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import SLAIndicator from './SLAIndicator';
-import { Eye, Paperclip, ChevronRight, Inbox, Clock, User, ArrowUpRight, Download } from 'lucide-react';
+import { Eye, Paperclip, ChevronRight, Inbox, Clock, User, ArrowUpRight, Download, CheckCircle2 } from 'lucide-react';
 import { downloadTicketPDF } from '../utils/pdfGenerator';
 
 const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
@@ -84,6 +84,19 @@ const TicketTable = ({ tickets = [], loading = false, onClaim }) => {
                     </span>
                   )}
                 </div>
+
+                {/* Display Problem Solved & Verified Solution */}
+                {(['RESOLVED', 'CLOSED'].includes(ticket.status) || ticket.resolutionNotes || ticket.solution) && (
+                  <div className="mt-2 rounded-xl bg-emerald-50 border border-emerald-300 px-2.5 py-1.5 text-[11px] text-emerald-950 flex items-start gap-1.5 shadow-sm">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <span className="font-bold text-emerald-900 mr-1.5">Problem Solved:</span>
+                      <span className="truncate inline-block max-w-[280px] font-medium text-emerald-800 align-bottom">
+                        {ticket.resolutionNotes || ticket.solution || 'Verified resolution provided by IT support'}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </td>
 
               {/* Priority */}

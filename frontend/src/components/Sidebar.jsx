@@ -31,14 +31,14 @@ const Sidebar = ({ isOpen, onClose }) => {
       title: 'Executive & Governance',
       links: [
         { to: '/admin', label: 'Executive Dashboard', icon: ShieldCheck },
-        { to: '/reports', label: 'Reports & SLA Analytics', icon: BarChart3 },
+        { to: '/reports', label: 'Complete Complaint Reports', icon: BarChart3 },
         { to: '/users', label: 'User Directory', icon: Users },
       ],
     });
     sections.push({
       title: 'Incident Queue',
       links: [
-        { to: '/my-tickets', label: 'All Incidents', icon: Inbox },
+        { to: '/my-tickets', label: 'All Organization Complaints', icon: Inbox },
       ],
     });
     sections.push({
@@ -50,8 +50,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       title: 'Support Operations',
       links: [
         { to: '/agent', label: 'Triage Center', icon: Headphones },
-        { to: '/my-tickets', label: 'Incident Queue', icon: Inbox },
-        { to: '/reports', label: 'SLA Performance', icon: BarChart3 },
+        { to: '/my-tickets', label: 'Assigned Incident Queue', icon: Inbox },
       ],
     });
     sections.push({
@@ -65,7 +64,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       links: [
         { to: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard },
         { to: '/create-ticket', label: 'File a Complaint', icon: PlusCircle },
-        { to: '/my-tickets', label: 'My Incident History', icon: Inbox },
+        { to: '/my-tickets', label: 'My Posted Complaints', icon: Inbox },
       ],
     });
     sections.push({
@@ -96,7 +95,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       {/* Sidebar Panel */}
       <aside
-        className={`portal-sidebar fixed top-16 bottom-0 left-0 z-40 flex w-64 flex-col justify-between p-4 transition-transform duration-250 ease-in-out lg:static lg:translate-x-0 ${
+        className={`portal-sidebar fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-shrink-0 flex-col justify-between p-4 overflow-y-auto transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:h-full lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
