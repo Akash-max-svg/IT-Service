@@ -284,3 +284,17 @@
   z-index: 1 !important;
   pointer-events: none !important;
 }
+
+/* Vanta Clouds Non-blocking Layering */
+#vanta-clouds-bg,
+#vanta-clouds-bg canvas,
+#vanta-clouds-bg .vanta-canvas {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+

@@ -29,16 +29,20 @@ const VantaCloudsBackground = () => {
             (VantaClouds && (VantaClouds.default || VantaClouds));
 
           if (typeof cloudsFunc === 'function') {
+            // Clean up any stray child elements before creating canvas
+            vantaRef.current.innerHTML = '';
+
             effectRef.current = cloudsFunc({
               el: vantaRef.current,
               THREE: THREE,
               mouseControls: true,
-              touchControls: true,
+              touchControls: false, // Prevents hijacking touchpad/touch gesture scrolling
               gyroControls: false,
               minHeight: 200.0,
               minWidth: 200.0,
-              scale: 1.0,
-              scaleMobile: 1.0,
+              scale: 3.0, // High-performance optimization (prevents GPU throttling & browser freezing)
+              scaleMobile: 8.0,
+              speed: 0.8,
               skyColor: 0x68b8d7,
               cloudColor: 0xadc1de,
               cloudShadowColor: 0x183550,
@@ -68,6 +72,9 @@ const VantaCloudsBackground = () => {
           // ignore cleanup errors
         }
         effectRef.current = null;
+      }
+      if (vantaRef.current) {
+        vantaRef.current.innerHTML = '';
       }
     };
   }, []);
